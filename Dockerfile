@@ -20,6 +20,9 @@ ENV DATABASE_URL="file:./dev.db"
 RUN npx prisma generate
 RUN npm run build
 
+# Remove dependências de desenvolvimento para deixar a pasta node_modules leve e rápida para copiar
+RUN npm prune --omit=dev
+
 # --- STAGE 3: RUNTIME PRODUCTION ENVIRONMENT ---
 FROM node:22-alpine AS runner
 WORKDIR /app

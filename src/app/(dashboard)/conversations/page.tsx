@@ -60,7 +60,7 @@ export default function ConversationsPage() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState("");
 
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchConversations = async (search = "") => {
     setError("");
@@ -94,7 +94,23 @@ export default function ConversationsPage() {
   };
 
   useEffect(() => { fetchConversations(); }, []);
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [activeChat?.messages]);
+
+  // Rolar instantaneamente ao carregar uma nova conversa
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [activeChat?.id]);
+
+  // Rolar suavemente ao receber novas mensagens
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+  }, [activeChat?.messages]);
 
   // Quando muda de conversa, limpa o resumo
   useEffect(() => {
@@ -308,7 +324,7 @@ export default function ConversationsPage() {
 
             {/* TAB: CHAT HISTORY */}
             {activeTab === "chat" && (
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-4">
                 {error && (
                   <div className="mx-auto max-w-xl text-center text-xs text-[var(--error)] bg-[var(--error-dim)] border border-[rgba(248,113,113,0.15)] rounded-lg p-3 flex items-center justify-center gap-2">
                     <i className="fa-solid fa-triangle-exclamation"></i>
@@ -379,7 +395,7 @@ export default function ConversationsPage() {
                       </div>
                     );
                   })}
-                  <div ref={chatEndRef} />
+
                 </div>
               </div>
             )}

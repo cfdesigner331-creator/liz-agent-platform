@@ -672,6 +672,53 @@ Assim que tiver todas as informações básicas coletadas (Nome, Produto, Quanti
 }
 
 /* ==========================================================================
+   REALTIME SSE BRIDGE (CONEXÃO EM TEMPO REAL)
+   ========================================================================== */
+function initRealtimeBridge() {
+  addConsoleLog('[Express] Inicializando ponte de eventos em tempo real com o backend...', 'info');
+  
+  const eventSource = new EventSource('/api/events');
+  
+  eventSource.onopen = () => {
+    addConsoleLog('[Express] Conexão SSE em tempo real estabelecida com sucesso!', 'success');
+  };
+  
+  eventSource.onerror = (err) => {
+    console.error('Erro no EventSource SSE:', err);
+    addConsoleLog('[Express] Conexão com o servidor perdida. Tentando reconectar...', 'warning');
+  };
+  
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'sys-status':
+          addConsoleLog(data.message, 'success');
+          break;
+        case 'log':
+          addConsoleLog(data.message, data.logType || 'info');
+          break;
+        case 'node-highlight':
+          highlightNode(data.nodeId, data.duration || 600);
+          break;
+        case 'connection-animate':
+          animateConnection(data.fromNodeId, data.toNodeId, data.duration || 300);
+          break;
+        case 'chat-message':
+          const direction = data.role === 'model' ? 'incoming' : 'outgoing';
+          appendMessage(data.content, direction, data.mediaUrl || null);
+          break;
+        default:
+          console.log('[SSE] Evento não mapeado:', data);
+      }
+    } catch (err) {
+      console.error('[SSE] Falha ao processar dados de SSE recebidos:', err);
+    }
+  };
+}
+
+/* ==========================================================================
    TOAST NOTIFICATION SYSTEM
    ========================================================================== */
 function showToast(message, type = 'success') {

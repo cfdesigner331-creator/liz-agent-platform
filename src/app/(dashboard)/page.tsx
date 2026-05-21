@@ -23,6 +23,7 @@ interface AgentConfig {
   aiProvider: string;
   openaiModel: string;
   groqModel: string;
+  geminiModel: string;
 }
 
 export default function PlaygroundPage() {
@@ -157,6 +158,9 @@ export default function PlaygroundPage() {
     if (!config) return "Carregando...";
     if (config.aiProvider === "groq") {
       return `Groq / ${config.groqModel}`;
+    }
+    if (config.aiProvider === "gemini") {
+      return `Google Gemini / ${config.geminiModel}`;
     }
     return `OpenAI / ${config.openaiModel}`;
   };

@@ -6,11 +6,13 @@ export interface ChatMessage {
 }
 
 interface ProviderOptions {
-  aiProvider?: string; // "openai" | "groq"
+  aiProvider?: string; // "openai" | "groq" | "gemini"
   openaiApiKey?: string;
   openaiModel?: string;
   groqApiKey?: string;
   groqModel?: string;
+  geminiApiKey?: string;
+  geminiModel?: string;
 }
 
 export async function generateResponse(
@@ -32,6 +34,14 @@ export async function generateResponse(
     client = new OpenAI({
       apiKey: apiKey,
       baseURL: "https://api.groq.com/openai/v1",
+    });
+  } else if (provider === "gemini") {
+    const apiKey = providerOpts?.geminiApiKey || process.env.GEMINI_API_KEY || "";
+    modelName = providerOpts?.geminiModel || "gemini-2.5-flash-lite";
+
+    client = new OpenAI({
+      apiKey: apiKey,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
     });
   } else {
     // OpenAI provider

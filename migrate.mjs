@@ -54,6 +54,8 @@ try {
         "openaiModel" TEXT NOT NULL DEFAULT 'gpt-4.1-mini',
         "groqApiKey" TEXT NOT NULL DEFAULT '',
         "groqModel" TEXT NOT NULL DEFAULT 'llama-3.3-70b-versatile',
+        "geminiApiKey" TEXT NOT NULL DEFAULT '',
+        "geminiModel" TEXT NOT NULL DEFAULT 'gemini-2.5-flash-lite',
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -83,6 +85,23 @@ try {
       )
     `).run();
   })();
+
+  // Verifica e adiciona dinamicamente colunas que podem estar faltando em instalações existentes
+  try {
+    const tableInfo = db.prepare("PRAGMA table_info('AgentConfig')").all();
+    const columns = tableInfo.map(c => c.name);
+    
+    if (!columns.includes("geminiApiKey")) {
+      console.log("[Migrate] Adicionando coluna 'geminiApiKey' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "geminiApiKey" TEXT NOT NULL DEFAULT ""').run();
+    }
+    if (!columns.includes("geminiModel")) {
+      console.log("[Migrate] Adicionando coluna 'geminiModel' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "geminiModel" TEXT NOT NULL DEFAULT "gemini-2.5-flash-lite"').run();
+    }
+  } catch (alterErr) {
+    console.warn("[Migrate] Aviso ao executar verificação estrutural (ALTER TABLE):", alterErr.message);
+  }
 
   db.close();
   console.log("[Migrate] Banco de dados SQLite sincronizado com sucesso nativamente!");

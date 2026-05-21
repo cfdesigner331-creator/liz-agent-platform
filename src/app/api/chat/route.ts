@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       content: msg.content,
     }));
 
-    // Executa a IA (Wrapper compatível OpenAI e Groq)
+    // Executa a IA (Wrapper compatível OpenAI, Groq e Gemini)
     const aiResult = await generateResponse(
       chatHistory,
       systemPrompt,
@@ -90,6 +90,8 @@ export async function POST(req: Request) {
         openaiModel: config?.openaiModel,
         groqApiKey: config?.groqApiKey,
         groqModel: config?.groqModel,
+        geminiApiKey: config?.geminiApiKey,
+        geminiModel: config?.geminiModel,
       }
     );
 

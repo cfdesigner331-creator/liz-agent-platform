@@ -19,6 +19,8 @@ interface AgentConfig {
   openaiModel: string;
   groqApiKey: string;
   groqModel: string;
+  geminiApiKey: string;
+  geminiModel: string;
 }
 
 export default function ConfigPage() {
@@ -38,6 +40,8 @@ export default function ConfigPage() {
     openaiModel: "gpt-4.1-mini",
     groqApiKey: "",
     groqModel: "llama-3.3-70b-versatile",
+    geminiApiKey: "",
+    geminiModel: "gemini-2.5-flash-lite",
   });
 
   const [loading, setLoading] = useState(true);
@@ -47,6 +51,7 @@ export default function ConfigPage() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [showGroqKey, setShowGroqKey] = useState(false);
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showEvoKey, setShowEvoKey] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -248,7 +253,7 @@ export default function ConfigPage() {
                 Seleção de Inteligência
               </h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <button
                   type="button"
                   onClick={() => updateField("aiProvider", "openai")}
@@ -292,10 +297,32 @@ export default function ConfigPage() {
                     Velocidades extremas de token por segundo e menores custos usando o modelo comercial Llama-3.3-70b.
                   </span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => updateField("aiProvider", "gemini")}
+                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1.5 ${
+                    config.aiProvider === "gemini"
+                      ? "bg-[rgba(168,85,247,0.06)] border-[rgba(168,85,247,0.35)] text-[var(--text-1)]"
+                      : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)] text-[var(--text-2)]"
+                  }`}
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <span className="font-bold text-sm flex items-center gap-2 text-[var(--text-1)]">
+                      <i className="fa-solid fa-wand-magic-sparkles text-xs text-purple-400"></i> Google Gemini
+                    </span>
+                    {config.aiProvider === "gemini" && (
+                      <i className="fa-solid fa-circle-check text-purple-400"></i>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                    Modelo de última geração gemini-2.5-flash-lite. Inteligência extremamente veloz, responsiva e otimizada.
+                  </span>
+                </button>
               </div>
 
               {/* Dynamic Keys Form Fields */}
-              {config.aiProvider === "openai" ? (
+              {config.aiProvider === "openai" && (
                 <div className="space-y-4 animate-fade-up">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -332,7 +359,9 @@ export default function ConfigPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {config.aiProvider === "groq" && (
                 <div className="space-y-4 animate-fade-up">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -365,6 +394,45 @@ export default function ConfigPage() {
                         onChange={(e) => updateField("groqApiKey", e.target.value)}
                         className="field-input text-xs font-mono"
                         placeholder="gsk_..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {config.aiProvider === "gemini" && (
+                <div className="space-y-4 animate-fade-up">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)]">
+                        Gemini Model Name
+                      </label>
+                      <input
+                        type="text"
+                        value={config.geminiModel}
+                        onChange={(e) => updateField("geminiModel", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="Ex: gemini-2.5-flash-lite"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                        <span>Gemini API Key</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowGeminiKey(!showGeminiKey)}
+                          className="text-[10px] text-[var(--accent-text)] hover:underline"
+                        >
+                          {showGeminiKey ? "Ocultar" : "Mostrar"}
+                        </button>
+                      </label>
+                      <input
+                        type={showGeminiKey ? "text" : "password"}
+                        value={config.geminiApiKey}
+                        onChange={(e) => updateField("geminiApiKey", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="AIzaSy..."
                       />
                     </div>
                   </div>

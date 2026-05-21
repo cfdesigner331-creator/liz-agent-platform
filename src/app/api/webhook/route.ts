@@ -17,6 +17,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Payload invalido" }, { status: 400 });
     }
 
+    if (!data || !data.key || !data.key.remoteJid) {
+      return NextResponse.json({ ok: true, ignored: "payload_incompleto_ou_sem_remoteJid" });
+    }
+
     const { remoteJid, fromMe } = data.key;
 
     // 2. Ignorar se for enviada por nos mesmos (fromMe === true)
@@ -63,8 +67,8 @@ export async function POST(req: Request) {
     if (config.allowedPhones && config.allowedPhones.trim() !== "") {
       const allowedList = config.allowedPhones
         .split(",")
-        .map(p => p.trim().replace("+", ""));
-      const cleanPhone = phone.replace("+", "");
+        .map(p => (p || "").trim().replace("+", ""));
+      const cleanPhone = (phone || "").replace("+", "");
       
       const isAllowed = allowedList.some(allowed => cleanPhone.includes(allowed));
       if (!isAllowed) {
@@ -124,6 +128,8 @@ export async function POST(req: Request) {
         openaiModel: config.openaiModel,
         groqApiKey: config.groqApiKey,
         groqModel: config.groqModel,
+        geminiApiKey: config.geminiApiKey,
+        geminiModel: config.geminiModel,
       }
     );
 

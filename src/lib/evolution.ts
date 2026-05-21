@@ -11,7 +11,7 @@ export async function sendWhatsAppMessage(
   }
 
   // Sanitiza a URL removendo barras finais
-  const cleanUrl = evolutionUrl.trim().replace(/\/$/, "");
+  const cleanUrl = (evolutionUrl || "").trim().replace(/\/$/, "");
   const url = `${cleanUrl}/message/sendText/${instanceId.trim()}`;
 
   const controller = new AbortController();

@@ -43,6 +43,32 @@ Assim que tiver todas as informações básicas coletadas (Nome, Produto, Quanti
 - **Quantidade:** [Quantidade]
 - **Contato:** [E-mail]`;
 
+function sanitizeConfig(config: any) {
+  if (!config) return null;
+  return {
+    id: config.id,
+    name: config.name || "Liz Agent",
+    systemPrompt: config.systemPrompt || "",
+    temperature: config.temperature ?? 0.4,
+    maxTokens: config.maxTokens ?? 1024,
+    evolutionUrl: config.evolutionUrl || "",
+    evolutionApiKey: config.evolutionApiKey || "",
+    instanceId: config.instanceId || "",
+    historyLimit: config.historyLimit ?? 12,
+    enabled: config.enabled ?? true,
+    allowedPhones: config.allowedPhones || "",
+    aiProvider: config.aiProvider || "openai",
+    openaiApiKey: config.openaiApiKey || "",
+    openaiModel: config.openaiModel || "gpt-4.1-mini",
+    groqApiKey: config.groqApiKey || "",
+    groqModel: config.groqModel || "llama-3.3-70b-versatile",
+    geminiApiKey: config.geminiApiKey || "",
+    geminiModel: config.geminiModel || "gemini-2.5-flash-lite",
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
+  };
+}
+
 export async function GET(req: Request) {
   if (!(await isAuthenticated(req))) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -61,11 +87,12 @@ export async function GET(req: Request) {
           enabled: true,
           aiProvider: "openai",
           openaiModel: "gpt-4.1-mini",
+          geminiModel: "gemini-2.5-flash-lite",
         },
       });
     }
 
-    return NextResponse.json(config);
+    return NextResponse.json(sanitizeConfig(config));
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -79,20 +106,41 @@ export async function PUT(req: Request) {
   try {
     const data = await req.json();
     const { id, createdAt, updatedAt, ...configData } = data;
+    
+    // Filtra e força tipos/valores para garantir que nenhum nulo/undefined seja repassado ao Prisma
+    const cleanConfigData = {
+      name: configData.name || "Liz Agent",
+      systemPrompt: configData.systemPrompt || "",
+      temperature: Number(configData.temperature ?? 0.4),
+      maxTokens: Number(configData.maxTokens ?? 1024),
+      evolutionUrl: configData.evolutionUrl || "",
+      evolutionApiKey: configData.evolutionApiKey || "",
+      instanceId: configData.instanceId || "",
+      historyLimit: Number(configData.historyLimit ?? 12),
+      enabled: Boolean(configData.enabled ?? true),
+      allowedPhones: configData.allowedPhones || "",
+      aiProvider: configData.aiProvider || "openai",
+      openaiApiKey: configData.openaiApiKey || "",
+      openaiModel: configData.openaiModel || "gpt-4.1-mini",
+      groqApiKey: configData.groqApiKey || "",
+      groqModel: configData.groqModel || "llama-3.3-70b-versatile",
+      geminiApiKey: configData.geminiApiKey || "",
+      geminiModel: configData.geminiModel || "gemini-2.5-flash-lite",
+    };
 
     let config = await prisma.agentConfig.findFirst();
     if (!config) {
       config = await prisma.agentConfig.create({
-        data: configData,
+        data: cleanConfigData,
       });
     } else {
       config = await prisma.agentConfig.update({
         where: { id: config.id },
-        data: configData,
+        data: cleanConfigData,
       });
     }
 
-    return NextResponse.json(config);
+    return NextResponse.json(sanitizeConfig(config));
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

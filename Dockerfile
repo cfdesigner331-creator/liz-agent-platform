@@ -31,7 +31,7 @@ ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_URL="file:/app/data/prod.db"
 
 # Cria pasta persistente do SQLite com permissões adequadas
-RUN mkdir -p /app/data && chown -R node:nodejs /app
+RUN mkdir -p /app/data && chown -R node:node /app
 
 # Copia dependências executáveis necessárias
 COPY --from=builder /app/public ./public
@@ -41,8 +41,8 @@ COPY --from=builder /app/migrate.mjs ./migrate.mjs
 COPY --from=builder /app/start.sh ./start.sh
 
 # Copia arquivos compilados do Next.js standalone
-COPY --from=builder --chown=node:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=node:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
 # Torna start.sh executável
 RUN chmod +x start.sh

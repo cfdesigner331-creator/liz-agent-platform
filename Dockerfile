@@ -44,6 +44,10 @@ COPY --from=builder /app/start.sh ./start.sh
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
 
+# Copia dependências do Prisma para execução do CLI e migrations em produção
+COPY --from=builder --chown=node:node /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=node:node /app/node_modules/@prisma ./node_modules/@prisma
+
 # Torna start.sh executável
 RUN chmod +x start.sh
 

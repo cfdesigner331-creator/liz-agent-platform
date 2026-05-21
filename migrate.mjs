@@ -17,8 +17,8 @@ try {
   }
 
   // Roda o prisma db push para sincronizar o schema com o SQLite de forma direta
-  console.log("[Migrate] Executando 'npx prisma db push'...");
-  execSync("npx prisma db push", { stdio: "inherit" });
+  console.log("[Migrate] Executando 'node node_modules/prisma/build/index.js db push'...");
+  execSync("node node_modules/prisma/build/index.js db push", { stdio: "inherit" });
   console.log("[Migrate] Banco de dados SQLite sincronizado com sucesso!");
 } catch (err) {
   console.error("[Migrate] Falha crítica ao migrar o banco de dados:", err);

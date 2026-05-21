@@ -11,6 +11,12 @@ function createPrismaClient() {
   
   if (dbUrl.startsWith("file:")) {
     dbPath = dbUrl.substring(5);
+  } else {
+    // Se a variável estiver configurada incorretamente com postgres/mysql antigo, aplica fallback seguro
+    const isDocker = require("fs").existsSync("/app/data");
+    dbPath = isDocker ? "/app/data/prod.db" : "./dev.db";
+    console.warn(`\n[Prisma Client] [AVISO CRÍTICO] A variável DATABASE_URL está incorreta ("${dbUrl}").`);
+    console.warn(`[Prisma Client] O banco de dados SQLite requer o prefixo "file:". Aplicando fallback de segurança para: "${dbPath}"\n`);
   }
   
   const absolutePath = path.resolve(dbPath);

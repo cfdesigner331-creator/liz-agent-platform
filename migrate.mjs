@@ -11,7 +11,11 @@ try {
   if (dbUrl.startsWith("file:")) {
     dbPath = dbUrl.substring(5);
   } else {
-    dbPath = dbUrl;
+    // Se a variável estiver configurada incorretamente com postgres/mysql antigo, aplica fallback seguro
+    const isDocker = fs.existsSync("/app/data");
+    dbPath = isDocker ? "/app/data/prod.db" : "./dev.db";
+    console.warn(`\n[Migrate] [AVISO CRÍTICO] A variável DATABASE_URL instalada no ambiente de produção está incorreta ("${dbUrl}").`);
+    console.warn(`[Migrate] O banco de dados SQLite requer o prefixo "file:". Aplicando fallback de segurança para: "${dbPath}"\n`);
   }
 
   const resolvedDbPath = path.resolve(dbPath);

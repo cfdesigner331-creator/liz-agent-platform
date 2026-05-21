@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model AgentConfig {
+  id              String   @id @default(cuid())
+  name            String   @default("Assistente IA")
+  systemPrompt    String   @default("Você é um assistente prestativo e amigável.")
+  temperature     Float    @default(0.7)
+  maxTokens       Int      @default(1024)
+  evolutionUrl    String   @default("")
+  evolutionApiKey String   @default("")
+  instanceId      String   @default("")
+  historyLimit    Int      @default(10)
+  enabled         Boolean  @default(true)
+  allowedPhones   String   @default("")
+  aiProvider      String   @default("openai")
+  openaiApiKey    String   @default("")
+  openaiModel     String   @default("gpt-4.1-mini")
+  groqApiKey      String   @default("")
+  groqModel       String   @default("llama-3.3-70b-versatile")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  source    String    @default("chat")
+  phone     String?
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  tokens         Int?
+  createdAt      DateTime     @default(now())
+}

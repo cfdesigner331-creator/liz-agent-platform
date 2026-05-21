@@ -1,26 +1,35 @@
 {
-  "name": "liz-agent-service",
-  "version": "1.0.0",
-  "description": "Standalone Liz AI Agent service for Criações Freitas (Express + Redis + PostgreSQL + Gemini SDK)",
-  "main": "index.js",
+  "name": "yt-agente-ia",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
   },
   "dependencies": {
-    "@google/genai": "^2.5.0",
-    "axios": "^1.6.2",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "ioredis": "^5.3.2",
-    "pg": "^8.11.3"
+    "@libsql/client": "^0.17.3",
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/adapter-libsql": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-sqlite3": "^12.9.0",
+    "dotenv": "^17.4.2",
+    "next": "16.2.5",
+    "openai": "^6.36.0",
+    "prisma": "^7.8.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "author": "Criações Freitas",
-  "license": "ISC"
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
 }

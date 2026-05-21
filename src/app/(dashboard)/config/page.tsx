@@ -140,7 +140,7 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="flex-1 p-8 max-w-5xl mx-auto w-full space-y-8 animate-fade-up">
+    <div className="flex-1 overflow-y-auto p-8 max-w-5xl mx-auto w-full space-y-8 animate-fade-up">
       {/* Top Header */}
       <div className="flex justify-between items-center gap-4">
         <div>

@@ -121,7 +121,7 @@ export default function ConversationsPage() {
   };
 
   return (
-    <div className="flex-1 flex h-full min-h-0">
+    <div className="flex-1 flex h-full min-h-0 min-w-0">
       {/* Real WhatsApp Contacts Sidebar */}
       <div className="w-80 border-r border-[var(--border)] bg-[rgba(13,13,28,0.35)] flex flex-col shrink-0">
         {/* Search Header */}

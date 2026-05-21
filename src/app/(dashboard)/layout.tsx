@@ -23,7 +23,7 @@ export default async function DashboardLayout({
       <Sidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto relative z-10">
+      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden relative z-10">
         {children}
       </main>
     </div>

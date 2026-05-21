@@ -20,9 +20,6 @@ ENV DATABASE_URL="file:./dev.db"
 RUN npx prisma generate
 RUN npm run build
 
-# Remove dependências de desenvolvimento para deixar a pasta node_modules leve e rápida para copiar
-RUN npm prune --omit=dev
-
 # --- STAGE 3: RUNTIME PRODUCTION ENVIRONMENT ---
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -46,9 +43,6 @@ COPY --from=builder /app/start.sh ./start.sh
 # Copia arquivos compilados do Next.js standalone
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-
-# Copia a pasta node_modules completa para garantir que todas as dependências do Prisma CLI e adapters fiquem disponíveis em produção
-COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 
 # Torna start.sh executável
 RUN chmod +x start.sh

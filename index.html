@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plataforma Liz Agent - Criações Freitas</title>
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Plataforma de simulação interativa e gerador de arquivos de produção para a Liz IA, o chatbot inteligente integrado com Evolution API, Gemini 2.5 Flash Lite, n8n, Redis e Postgres.">
+  <meta name="theme-color" content="#0b0f19">
+  
+  <!-- FontAwesome & Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Main Grid System -->
+  <div class="app-container">
+    
+    <!-- Left Static Sidebar -->
+    <aside class="sidebar">
+      <div class="logo-container">
+        <div class="logo" title="Criações Freitas">CF</div>
+      </div>
+      
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-dashboard" data-tooltip="Simulador & Fluxo">
+          <i class="fa-solid fa-network-wired"></i>
+        </button>
+        <button class="nav-item" data-tab="tab-code" data-tooltip="Códigos & Exportações">
+          <i class="fa-solid fa-code"></i>
+        </button>
+        <button class="nav-item" data-tab="tab-settings" data-tooltip="Ajustes do Agente">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </nav>
+      
+      <div class="user-profile" title="Liz Admin">
+        <i class="fa-solid fa-circle-user"></i>
+      </div>
+    </aside>
+
+    <!-- Right Workspace Frame -->
+    <main class="main-content">
+      
+      <!-- Top Control Header -->
+      <header class="top-header">
+        <div class="header-title-area">
+          <h1>LIZ AGENT PLATFORM</h1>
+          <p>Orquestração e Simulação do Chatbot de Vendas para Criações Freitas</p>
+        </div>
+        
+        <!-- Live Status Indicators -->
+        <div class="status-badge-group">
+          <div class="status-badge online" id="status-evolution" title="Evolution API configurada e ativa">
+            <span class="dot"></span> Evolution API
+          </div>
+          <div class="status-badge active" id="status-gemini" title="Gemini 2.5 Flash Lite conectado com modelo de visão">
+            <span class="dot"></span> Gemini 2.5 Flash
+          </div>
+          <div class="status-badge active" id="status-database" title="Postgres & Redis instanciados localmente">
+            <span class="dot"></span> Cache & DB
+          </div>
+        </div>
+      </header>
+
+      <!-- Dynamic Tab Panes -->
+      <section class="workspace">
+        
+        <!-- TAB 1: WORKFLOW & SIMULATOR PLAYGROUND -->
+        <div class="tab-pane active" id="tab-dashboard">
+          
+          <!-- n8n Animated Canvas Visualizer -->
+          <div class="canvas-section">
+            <div class="canvas-header">
+              <h2><i class="fa-solid fa-circle-nodes"></i> Pipeline de Microsserviço Node.js (Execução Liz)</h2>
+              <div style="font-size: 11px; color: var(--text-muted);">
+                <i class="fa-solid fa-circle" style="color: var(--color-primary); font-size: 8px;"></i> Clique nos blocos para visualizar as configurações técnicas
+              </div>
+            </div>
+            
+            <div class="canvas-container">
+              <!-- SVG Connector paths overlaid -->
+              <svg class="flow-connections" id="flow-lines"></svg>
+              
+              <!-- Node Grid Map -->
+              <div class="node-graph">
+                <!-- Row 1: Start Ingestion -->
+                <div class="node-row">
+                  <div class="node-card" id="node-webhook" data-node-type="webhook">
+                    <div class="node-header">
+                      <i class="fa-solid fa-globe"></i> Express Webhook (POST)
+                    </div>
+                    <div class="node-body">Express.js escutando rota POST /webhook da Evolution API.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">HTTP Router</span>
+                      <span>Express</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 2: Message router -->
+                <div class="node-row">
+                  <div class="node-card" id="node-switch" data-node-type="switch">
+                    <div class="node-header">
+                      <i class="fa-solid fa-code-branch"></i> Logic Router (Text/Media)
+                    </div>
+                    <div class="node-body">Valida propriedades do objeto: conversa, imagem ou áudio.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">Condition</span>
+                      <span>Vanilla JS</span>
+                    </div>
+                  </div>
+                  
+                  <div class="node-card" id="node-media" data-node-type="api">
+                    <div class="node-header">
+                      <i class="fa-solid fa-cloud-arrow-down"></i> uazApi Media & Vision
+                    </div>
+                    <div class="node-body">Axios baixa mídia binária e Gemini SDK descreve estampas.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">Axios + SDK</span>
+                      <span>Visão IA</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 3: Session & Queue Locks -->
+                <div class="node-row">
+                  <div class="node-card" id="node-redis" data-node-type="redis">
+                    <div class="node-header">
+                      <i class="fa-solid fa-lock"></i> Redis Anti-loop (Lock)
+                    </div>
+                    <div class="node-body">ioredis valida chaves ativas do chatId por 300 segundos.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">ioredis SET</span>
+                      <span>TTL 300s</span>
+                    </div>
+                  </div>
+                  
+                  <div class="node-card" id="node-wait" data-node-type="wait">
+                    <div class="node-header">
+                      <i class="fa-solid fa-hourglass-half"></i> Fila Debounce (Wait)
+                    </div>
+                    <div class="node-body">setTimeout em fila de mensagens ativas para debounce.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">Queue</span>
+                      <span>1.5 Seg</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 4: Database Memory & AI Brain -->
+                <div class="node-row">
+                  <div class="node-card" id="node-postgres-get" data-node-type="postgres">
+                    <div class="node-header">
+                      <i class="fa-solid fa-database"></i> pg-pool Get Memory
+                    </div>
+                    <div class="node-body">Consulta últimas 15 mensagens do chatId na tabela SQL.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">pg SELECT</span>
+                      <span>History Stack</span>
+                    </div>
+                  </div>
+
+                  <div class="node-card" id="node-gemini" data-node-type="gemini">
+                    <div class="node-header">
+                      <i class="fa-solid fa-brain"></i> Gemini SDK (Flash Lite)
+                    </div>
+                    <div class="node-body">ai.models.generateContent({ model: "gemini-2.5-flash-lite" })</div>
+                    <div class="node-footer">
+                      <span class="node-badge">SDK Call</span>
+                      <span>Temp 0.4</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Row 5: Save State & Send API -->
+                <div class="node-row">
+                  <div class="node-card" id="node-postgres-save" data-node-type="postgres">
+                    <div class="node-header">
+                      <i class="fa-solid fa-floppy-disk"></i> pg-pool Save Memory
+                    </div>
+                    <div class="node-body">Persiste nova interação do cliente no PostgreSQL.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">pg INSERT</span>
+                      <span>Persistent</span>
+                    </div>
+                  </div>
+
+                  <div class="node-card" id="node-sender" data-node-type="api">
+                    <div class="node-header">
+                      <i class="fa-solid fa-paper-plane"></i> Evolution Send API
+                    </div>
+                    <div class="node-body">Axios envia mensagem para endpoint com delay calculado.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">POST SendText</span>
+                      <span>Axios Client</span>
+                    </div>
+                  </div>
+
+                  <div class="node-card" id="node-webhook-end" data-node-type="webhook">
+                    <div class="node-header">
+                      <i class="fa-solid fa-bolt"></i> Axios Lead Webhook
+                    </div>
+                    <div class="node-body">Extrai lead estruturado em JSON e envia ao ERP do cliente.</div>
+                    <div class="node-footer">
+                      <span class="node-badge">Axios POST</span>
+                      <span>CRM Webhook</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Bottom glowing unix console terminal drawer -->
+            <div class="console-drawer">
+              <div class="console-header">
+                <span class="console-title"><i class="fa-solid fa-terminal"></i> Depurador de Execução do Fluxo Liz (Logs do n8n)</span>
+                <span style="font-size: 9px; color: var(--text-muted); font-family: var(--font-sans)">Pressione nos cartões para inspecionar</span>
+              </div>
+              <div class="console-body" id="console-body">
+                <div class="console-log system">
+                  <span class="time">[11:56:47]</span>
+                  <span class="message">Plataforma Liz Iniciada. Conexão simulada com banco de dados PostgreSQL e Redis cache pronta.</span>
+                </div>
+                <div class="console-log info">
+                  <span class="time">[11:56:47]</span>
+                  <span class="message">Pronto para receber interações. Digite mensagens ou envie estampas no WhatsApp de simulação ao lado!</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WhatsApp Chat Simulator Frame (Right Sidebar) -->
+          <div class="simulator-section">
+            <!-- WA Header -->
+            <div class="simulator-header">
+              <div class="avatar">L</div>
+              <div class="info">
+                <h3>Liz | Criações Freitas</h3>
+                <span><i class="fa-solid fa-circle" style="font-size: 7px;"></i> Digitando com atraso real...</span>
+              </div>
+            </div>
+            
+            <!-- Bubble Messages list -->
+            <div class="chat-messages" id="chat-messages">
+              <!-- Dynamically populated -->
+            </div>
+            
+            <!-- Typing effect simulator bubble -->
+            <div class="typing-indicator" id="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            
+            <!-- Chat Footer Input Area -->
+            <div class="chat-input-bar">
+              <!-- Thumbnail Preview Zone -->
+              <div class="image-upload-preview-area" id="image-preview-area"></div>
+              
+              <!-- Quick references chips -->
+              <div style="font-size: 10px; color: var(--text-muted); margin-bottom: -4px;">Simular envio de Imagem de Estampa:</div>
+              <div class="quick-templates-wrapper" id="quick-templates">
+                <!-- Dynamically populated chips -->
+              </div>
+              
+              <!-- Core Controls -->
+              <div class="input-controls">
+                <button class="icon-btn" id="upload-btn" title="Simular Anexar Imagem da Estampa">
+                  <i class="fa-solid fa-paperclip"></i>
+                </button>
+                <input type="text" class="input-field" id="chat-input" placeholder="Digite uma mensagem para a Liz...">
+                <button class="icon-btn send-btn" id="send-btn" title="Enviar Mensagem">
+                  <i class="fa-solid fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: CODE EXPORTER -->
+        <div class="tab-pane" id="tab-code">
+          <!-- Code Sidebar Navigation -->
+          <div class="code-sidebar">
+            <h2><i class="fa-solid fa-download"></i> Arquivos de Produção</h2>
+            <div class="code-menu">
+              <button class="code-menu-item active" data-code="index-js">
+                <i class="fa-solid fa-code"></i> Serviço Node.js (index.js)
+              </button>
+              <button class="code-menu-item" data-code="package-json">
+                <i class="fa-solid fa-box-open"></i> Dependências (package.json)
+              </button>
+              <button class="code-menu-item" data-code="docker-compose">
+                <i class="fa-brands fa-docker"></i> Docker Stack (YAML)
+              </button>
+              <button class="code-menu-item" data-code="gemini-prompt">
+                <i class="fa-solid fa-brain"></i> System Prompt Gemini
+              </button>
+              <button class="code-menu-item" data-code="postgres-sql">
+                <i class="fa-solid fa-database"></i> Setup Postgres SQL
+              </button>
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-top: 10px;">
+              <i class="fa-solid fa-circle-info"></i> Todos estes códigos são prontos para produção. Use os arquivos para instanciar a estrutura do Evolution API + Gemini + n8n na sua empresa.
+            </div>
+          </div>
+          
+          <!-- Code Viewer Area -->
+          <div class="code-display-panel">
+            <div class="code-panel-header">
+              <div class="code-panel-title" id="code-title">Fluxo n8n - liz_agent_flow.json</div>
+              <div class="code-panel-actions">
+                <button class="primary-btn" id="copy-code-btn">
+                  <i class="fa-solid fa-copy"></i> Copiar Código
+                </button>
+              </div>
+            </div>
+            <div class="code-view-wrapper">
+              <pre><code class="code-content-box json" id="code-content"></code></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 3: AGENT SETTINGS / VARIABLES -->
+        <div class="tab-pane" id="tab-settings">
+          <div id="tab-settings-container">
+            <h2 style="font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px;">
+              <i class="fa-solid fa-sliders" style="color: var(--color-primary)"></i> Configurações do Fluxo & Chaves
+            </h2>
+            
+            <div class="settings-grid">
+              
+              <!-- Section 1: APIs and Hosts -->
+              <div class="settings-card">
+                <h3><i class="fa-solid fa-link"></i> Servidores & Acesso</h3>
+                <p class="subtitle">Insira as credenciais de rede do seu Evolution API e endpoints de leads.</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="form-group">
+                    <label for="set-evolution-url">Evolution API URL</label>
+                    <input type="text" class="form-control" id="set-evolution-url" value="http://localhost:8080">
+                  </div>
+                  <div class="form-group">
+                    <label for="set-evolution-key">Evolution API Key</label>
+                    <input type="password" class="form-control" id="set-evolution-key" value="EvolutionSecretApiKey_2026">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="form-group">
+                    <label for="set-instance-name">Nome da Instância WhatsApp</label>
+                    <input type="text" class="form-control" id="set-instance-name" value="freitas-prod">
+                  </div>
+                  <div class="form-group">
+                    <label for="set-webhook-crm">CRM Webhook URL (Fim de Fluxo)</label>
+                    <input type="text" class="form-control" id="set-webhook-crm" value="http://seu-crm.com/api/webhook/leads">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="set-gemini-key">Google Gemini API Key (Gemini 2.5 Flash Lite)</label>
+                  <input type="password" class="form-control" id="set-gemini-key" placeholder="Insira sua API Key do Google AI Studio (AIzaSy...)">
+                  <span style="font-size: 10px; color: var(--text-muted); margin-top: 4px; display: block;">
+                    <i class="fa-solid fa-circle-question"></i> Suas chaves são salvas localmente apenas no seu navegador com segurança e personalizam os arquivos exportados.
+                  </span>
+                </div>
+              </div>
+
+              <!-- Section 2: Cache, Memory and Queuing parameters -->
+              <div class="settings-card">
+                <h3><i class="fa-solid fa-clock"></i> Controle de Fila, Bancos & Anti-Loop</h3>
+                <p class="subtitle">Ajuste o comportamento do Redis, PostgreSQL e tempos de atraso de mensagens.</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="form-group">
+                    <label for="set-redis-ttl">Redis Lock TTL (segundos)</label>
+                    <input type="number" class="form-control" id="set-redis-ttl" value="300" min="60" max="1800">
+                  </div>
+                  <div class="form-group">
+                    <label for="set-wait-time">Tempo de Debounce do Wait (segundos)</label>
+                    <input type="number" step="0.1" class="form-control" id="set-wait-time" value="1.5" min="0.5" max="10.0">
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                  <div class="form-group">
+                    <label for="set-postgres-url">PostgreSQL Connection URL</label>
+                    <input type="text" class="form-control" id="set-postgres-url" value="postgresql://postgres:FreitasAdmin99@postgres-db:5432/freitas_db">
+                  </div>
+                  <div class="form-group">
+                    <label for="set-redis-url">Redis Connection URL</label>
+                    <input type="text" class="form-control" id="set-redis-url" value="redis://redis-cache:6379/1">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 3: Gemini Brain Prompting -->
+              <div class="settings-card">
+                <h3><i class="fa-solid fa-brain"></i> Roteiro de Qualificação do Agente (Prompt da Liz)</h3>
+                <p class="subtitle">Gerencie o cérebro da Liz. As alterações feitas aqui serão utilizadas instantaneamente na simulação do chat.</p>
+                
+                <div class="form-group">
+                  <label for="agent-prompt-setting">System Prompt Principal da Liz (Criações Freitas)</label>
+                  <textarea class="form-control" id="agent-prompt-setting" rows="8">Você é a Liz, assistente de inteligência artificial da "Criações Freitas", uma confecção especializada em vestuário personalizado, estamparia premium e bordados industriais.
+
+### 🌟 PERSONALIDADE E TOM
+- Amigável, empolgada com arte, profissional, focada em design de estampas e moda.
+- Use emojis moderadamente (🎨, 🌸, 👕, ✂️).
+- Fale em português de forma fluida e calorosa.
+
+### 💼 DIRETRIZES DO NEGÓCIO
+1. PRODUTOS: Camisetas Premium (Algodão Penteado ou Poliéster), Moletons Flanelados, Uniformes Profissionais, Eco-bags.
+2. REGRAS DE IMPRESSÃO:
+   - Sublimação (Sem mínimo, feito em poliéster toque de algodão).
+   - Silk-Screen (Mínimo de 20 peças, ideal para cores sólidas).
+   - Bordado (Mínimo de 20 peças, alta sofisticação).
+3. PAGAMENTO: 50% de sinal para produção + 50% na expedição.</textarea>
+                </div>
+                
+                <div class="settings-footer">
+                  <button class="secondary-btn" type="reset">Restaurar Padrão</button>
+                  <button class="primary-btn" id="save-settings-btn"><i class="fa-solid fa-circle-check"></i> Salvar e Aplicar Ajustes</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+
+  </div>
+
+  <!-- Toast Element -->
+  <div class="toast-notif" id="toast-notif">
+    <i class="fa-solid fa-circle-check"></i>
+    <span>Configuração atualizada!</span>
+  </div>
+
+  <!-- Main JavaScript App -->
+  <script src="app.js"></script>
+</body>
+</html>

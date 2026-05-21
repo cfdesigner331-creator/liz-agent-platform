@@ -1,0 +1,26 @@
+{
+  "name": "liz-agent-service",
+  "version": "1.0.0",
+  "description": "Standalone Liz AI Agent service for Criações Freitas (Express + Redis + PostgreSQL + Gemini SDK)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@google/genai": "^2.5.0",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "Criações Freitas",
+  "license": "ISC"
+}

@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import Database from "better-sqlite3";
 import path from "path";
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
@@ -22,11 +21,10 @@ function createPrismaClient() {
   const absolutePath = path.resolve(dbPath);
   console.log(`[Prisma Client] Conectando ao SQLite via Driver Adapter em: ${absolutePath}`);
   
-  const sqlite = new Database(absolutePath, { timeout: 10000 });
-  // Otimiza concorrência de leitura/escrita em SQLite usando WAL Mode
-  sqlite.pragma("journal_mode = WAL");
-  
-  const adapter = new PrismaBetterSqlite3(sqlite);
+  const adapter = new PrismaBetterSqlite3({
+    url: `file:${absolutePath}`,
+    timeout: 10000,
+  });
   
   return new PrismaClient({
     adapter,

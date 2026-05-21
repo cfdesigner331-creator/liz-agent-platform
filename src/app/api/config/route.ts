@@ -64,6 +64,8 @@ function sanitizeConfig(config: any) {
     groqModel: config.groqModel || "llama-3.3-70b-versatile",
     geminiApiKey: config.geminiApiKey || "",
     geminiModel: config.geminiModel || "gemini-2.5-flash-lite",
+    audioResponseMode: (config as any).audioResponseMode || "on_audio",
+    ttsVoice: (config as any).ttsVoice || "Kore",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -88,6 +90,8 @@ export async function GET(req: Request) {
           aiProvider: "openai",
           openaiModel: "gpt-4.1-mini",
           geminiModel: "gemini-2.5-flash-lite",
+          audioResponseMode: "on_audio",
+          ttsVoice: "Kore",
         },
       });
     }
@@ -126,6 +130,8 @@ export async function PUT(req: Request) {
       groqModel: configData.groqModel || "llama-3.3-70b-versatile",
       geminiApiKey: configData.geminiApiKey || "",
       geminiModel: configData.geminiModel || "gemini-2.5-flash-lite",
+      audioResponseMode: configData.audioResponseMode || "on_audio",
+      ttsVoice: configData.ttsVoice || "Kore",
     };
 
     let config = await prisma.agentConfig.findFirst();

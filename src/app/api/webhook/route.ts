@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateResponse } from "@/lib/openai";
-import { sendWhatsAppMessage } from "@/lib/evolution";
+import { sendWhatsAppMessage, sendWhatsAppAudio } from "@/lib/evolution";
+import {
+  detectMediaType,
+  downloadMediaFromEvolution,
+  transcribeAudioWithGemini,
+  analyzeImageWithGemini,
+  analyzeDocumentWithGemini,
+  generateSpeechWithGemini,
+} from "@/lib/media";
 
 export async function POST(req: Request) {
   try {
@@ -13,113 +21,171 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: "evento_nao_suportado" });
     }
 
-    if (!data || !data.key) {
-      return NextResponse.json({ error: "Payload invalido" }, { status: 400 });
-    }
-
     if (!data || !data.key || !data.key.remoteJid) {
       return NextResponse.json({ ok: true, ignored: "payload_incompleto_ou_sem_remoteJid" });
     }
 
     const { remoteJid, fromMe } = data.key;
 
-    // 2. Ignorar se for enviada por nos mesmos (fromMe === true)
+    // 2. Ignorar mensagens enviadas por nós mesmos
     if (fromMe === true) {
       return NextResponse.json({ ok: true, ignored: "mensagem_propria" });
     }
 
-    // 3. Ignorar se remoteJid contiver @g.us (grupos)
+    // 3. Ignorar grupos
     if (remoteJid.includes("@g.us")) {
       return NextResponse.json({ ok: true, ignored: "mensagem_grupo" });
     }
 
-    // 4. phone = remoteJid sem o sufixo @s.whatsapp.net
     const phone = remoteJid.replace("@s.whatsapp.net", "");
-
-    // 5. Texto da mensagem (resiliente para conversation, extendedTextMessage ou caption de imagens/videos)
     const messageContent = data.message;
-    let userMessageText = "";
 
+    // 4. Detectar tipo de mídia
+    const mediaInfo = detectMediaType(messageContent || {});
+
+    // 5. Extrair texto da mensagem (texto puro)
+    let userMessageText = "";
     if (messageContent) {
       if (messageContent.conversation) {
         userMessageText = messageContent.conversation;
       } else if (messageContent.extendedTextMessage?.text) {
         userMessageText = messageContent.extendedTextMessage.text;
-      } else if (messageContent.imageMessage?.caption) {
-        userMessageText = messageContent.imageMessage.caption;
-      } else if (messageContent.videoMessage?.caption) {
-        userMessageText = messageContent.videoMessage.caption;
       }
     }
 
-    // Se a mensagem for completamente vazia (ex: reacoes ou mídias sem legenda), ignora
-    if (!userMessageText || userMessageText.trim() === "") {
-      return NextResponse.json({ ok: true, ignored: "mensagem_vazia" });
-    }
-
-    // 6. Carregar config do SQLite; ignorar se enabled === false
+    // 6. Carregar config do SQLite
     const config = await prisma.agentConfig.findFirst();
     if (!config || config.enabled === false) {
       return NextResponse.json({ ok: true, ignored: "agente_desativado" });
     }
 
-    // 7. Se allowedPhones nao vazio, verificar se phone esta na lista CSV
+    // 7. Verificar allowedPhones
     if (config.allowedPhones && config.allowedPhones.trim() !== "") {
       const allowedList = config.allowedPhones
         .split(",")
         .map(p => (p || "").trim().replace("+", ""));
       const cleanPhone = (phone || "").replace("+", "");
-      
       const isAllowed = allowedList.some(allowed => cleanPhone.includes(allowed));
       if (!isAllowed) {
         return NextResponse.json({ ok: true, ignored: "telefone_nao_permitido" });
       }
     }
 
-    // 8. Buscar ou criar Conversation (source: "whatsapp", phone)
-    let conversation = await prisma.conversation.findFirst({
-      where: {
-        source: "whatsapp",
-        phone: phone,
-      },
-    });
+    // 8. Se for mídia — baixar e processar com Gemini
+    let mediaCaption = "";
+    let detectedMediaType = mediaInfo.type;
+    let isAudioMessage = false;
 
+    if (mediaInfo.type && config.geminiApiKey) {
+      console.log(`[Webhook] Mídia detectada: ${mediaInfo.type} (${mediaInfo.mimetype})`);
+
+      const mediaData = await downloadMediaFromEvolution(
+        config.evolutionUrl,
+        config.evolutionApiKey,
+        config.instanceId,
+        data.key
+      );
+
+      if (mediaData) {
+        if (mediaInfo.type === "audio") {
+          isAudioMessage = true;
+          mediaCaption = await transcribeAudioWithGemini(
+            mediaData.base64,
+            mediaData.mimetype,
+            config.geminiApiKey,
+            config.geminiModel
+          );
+          console.log(`[Webhook] Transcrição: ${mediaCaption.substring(0, 80)}...`);
+        } else if (mediaInfo.type === "image") {
+          mediaCaption = await analyzeImageWithGemini(
+            mediaData.base64,
+            mediaData.mimetype,
+            mediaInfo.caption,
+            config.geminiApiKey,
+            config.geminiModel
+          );
+        } else if (mediaInfo.type === "document") {
+          mediaCaption = await analyzeDocumentWithGemini(
+            mediaData.base64,
+            mediaData.mimetype,
+            mediaInfo.title,
+            config.geminiApiKey,
+            config.geminiModel
+          );
+        }
+      }
+    }
+
+    // 9. Montar texto final do usuário para o histórico e para a IA
+    let effectiveUserText = userMessageText.trim();
+
+    if (mediaInfo.type === "audio" && mediaCaption) {
+      // Para áudio: transcrição substitui o texto
+      effectiveUserText = mediaCaption;
+    } else if (mediaInfo.type === "image" && mediaCaption) {
+      // Para imagem: junta caption do usuário + descrição Gemini
+      const userCaption = mediaInfo.caption ? `"${mediaInfo.caption}" ` : "";
+      effectiveUserText = userCaption + `[Imagem enviada]`;
+    } else if (mediaInfo.type === "document" && mediaCaption) {
+      const userCaption = mediaInfo.title ? `"${mediaInfo.title}" ` : "";
+      effectiveUserText = `[Documento: ${userCaption}]`;
+    }
+
+    // Se completamente vazio após processamento, ignora
+    if (!effectiveUserText && !mediaCaption) {
+      return NextResponse.json({ ok: true, ignored: "mensagem_vazia" });
+    }
+
+    const textToSave = effectiveUserText || "[mídia sem texto]";
+
+    // 10. Buscar ou criar conversa
+    let conversation = await prisma.conversation.findFirst({
+      where: { source: "whatsapp", phone },
+    });
     if (!conversation) {
       conversation = await prisma.conversation.create({
-        data: {
-          source: "whatsapp",
-          phone: phone,
-        },
+        data: { source: "whatsapp", phone },
       });
     }
 
-    // 9. Salvar Message do usuario
+    // 11. Salvar mensagem do usuário com metadados de mídia
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
         role: "user",
-        content: userMessageText.trim(),
+        content: textToSave,
+        mediaType: detectedMediaType,
+        mediaCaption: mediaCaption || null,
       },
     });
 
-    // 10. Buscar historico de mensagens ordenadas por data
+    // 12. Buscar histórico para contexto
     const historyLimit = config.historyLimit || 10;
     const dbMessages = await prisma.message.findMany({
       where: { conversationId: conversation.id },
       orderBy: { createdAt: "desc" },
       take: historyLimit,
     });
-    
-    // Inverte para ficar em ordem cronologica ascendente
+
     const chatHistory = dbMessages.reverse().map(msg => ({
       role: msg.role,
       content: msg.content,
     }));
 
-    // 11. generateResponse com OpenAI ou Groq compatível
+    // 13. Injetar contexto de mídia no sistema
+    let systemPromptWithMedia = config.systemPrompt;
+    if (mediaCaption && mediaInfo.type && mediaInfo.type !== "audio") {
+      const mediaLabel =
+        mediaInfo.type === "image" ? "imagem" :
+        mediaInfo.type === "document" ? "documento" : "mídia";
+      systemPromptWithMedia +=
+        `\n\n[CONTEXTO DE MÍDIA — ${mediaLabel.toUpperCase()} RECEBIDA]\n${mediaCaption}\n[FIM DO CONTEXTO]`;
+    }
+
+    // 14. Gerar resposta de texto com IA
     const aiResult = await generateResponse(
       chatHistory,
-      config.systemPrompt,
+      systemPromptWithMedia,
       config.temperature,
       config.maxTokens,
       {
@@ -133,7 +199,7 @@ export async function POST(req: Request) {
       }
     );
 
-    // 12. Salvar Message do assistente com os tokens
+    // 15. Salvar resposta da IA
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -143,23 +209,56 @@ export async function POST(req: Request) {
       },
     });
 
-    // Atualiza updatedAt da conversa
     await prisma.conversation.update({
       where: { id: conversation.id },
       data: { updatedAt: new Date() },
     });
 
-    // 13. sendWhatsAppMessage com as credenciais da config
+    // 16. Enviar resposta via Evolution API (texto ou áudio dependendo do modo)
     if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
-      await sendWhatsAppMessage(
-        config.evolutionUrl,
-        config.evolutionApiKey,
-        config.instanceId,
-        remoteJid, // remoteJid completo contendo @s.whatsapp.net é aceito pela Evolution
-        aiResult.content
-      );
+      const audioMode = (config as any).audioResponseMode || "on_audio";
+      const shouldSendAudio =
+        audioMode === "always" ||
+        (audioMode === "on_audio" && isAudioMessage);
+
+      let audioSent = false;
+
+      if (shouldSendAudio && config.geminiApiKey) {
+        try {
+          const audioBase64 = await generateSpeechWithGemini(
+            aiResult.content,
+            config.geminiApiKey,
+            (config as any).ttsVoice || "Kore"
+          );
+
+          if (audioBase64) {
+            await sendWhatsAppAudio(
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              audioBase64
+            );
+            audioSent = true;
+            console.log(`[Webhook] Resposta enviada como nota de voz para +${phone}`);
+          }
+        } catch (ttsErr: any) {
+          console.warn("[Webhook] Falha no TTS Gemini, fazendo fallback para texto:", ttsErr.message);
+        }
+      }
+
+      // Fallback: enviar texto se áudio não foi enviado
+      if (!audioSent) {
+        await sendWhatsAppMessage(
+          config.evolutionUrl,
+          config.evolutionApiKey,
+          config.instanceId,
+          remoteJid,
+          aiResult.content
+        );
+      }
     } else {
-      console.warn("[Webhook] Evolution API nao configurada no SQLite. Resposta de IA nao entregue.");
+      console.warn("[Webhook] Evolution API não configurada. Resposta de IA não entregue.");
     }
 
     return NextResponse.json({ ok: true });

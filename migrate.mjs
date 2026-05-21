@@ -56,6 +56,8 @@ try {
         "groqModel" TEXT NOT NULL DEFAULT 'llama-3.3-70b-versatile',
         "geminiApiKey" TEXT NOT NULL DEFAULT '',
         "geminiModel" TEXT NOT NULL DEFAULT 'gemini-2.5-flash-lite',
+        "audioResponseMode" TEXT NOT NULL DEFAULT 'on_audio',
+        "ttsVoice" TEXT NOT NULL DEFAULT 'Kore',
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -80,6 +82,8 @@ try {
         "role" TEXT NOT NULL,
         "content" TEXT NOT NULL,
         "tokens" INTEGER,
+        "mediaType" TEXT,
+        "mediaCaption" TEXT,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation" ("id") ON DELETE CASCADE ON UPDATE CASCADE
       )
@@ -98,6 +102,26 @@ try {
     if (!columns.includes("geminiModel")) {
       console.log("[Migrate] Adicionando coluna 'geminiModel' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "geminiModel" TEXT NOT NULL DEFAULT "gemini-2.5-flash-lite"').run();
+    }
+    if (!columns.includes("audioResponseMode")) {
+      console.log("[Migrate] Adicionando coluna 'audioResponseMode' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "audioResponseMode" TEXT NOT NULL DEFAULT "on_audio"').run();
+    }
+    if (!columns.includes("ttsVoice")) {
+      console.log("[Migrate] Adicionando coluna 'ttsVoice' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "ttsVoice" TEXT NOT NULL DEFAULT "Kore"').run();
+    }
+
+    // Message table new columns
+    const msgInfo = db.prepare("PRAGMA table_info('Message')").all();
+    const msgCols = msgInfo.map(c => c.name);
+    if (!msgCols.includes("mediaType")) {
+      console.log("[Migrate] Adicionando coluna 'mediaType' à tabela Message...");
+      db.prepare('ALTER TABLE "Message" ADD COLUMN "mediaType" TEXT').run();
+    }
+    if (!msgCols.includes("mediaCaption")) {
+      console.log("[Migrate] Adicionando coluna 'mediaCaption' à tabela Message...");
+      db.prepare('ALTER TABLE "Message" ADD COLUMN "mediaCaption" TEXT').run();
     }
   } catch (alterErr) {
     console.warn("[Migrate] Aviso ao executar verificação estrutural (ALTER TABLE):", alterErr.message);

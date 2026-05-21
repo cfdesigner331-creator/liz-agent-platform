@@ -23,10 +23,12 @@ model AgentConfig {
   openaiModel     String   @default("gpt-4.1-mini")
   groqApiKey      String   @default("")
   groqModel       String   @default("llama-3.3-70b-versatile")
-  geminiApiKey    String   @default("")
-  geminiModel     String   @default("gemini-2.5-flash-lite")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  geminiApiKey        String   @default("")
+  geminiModel         String   @default("gemini-2.5-flash-lite")
+  audioResponseMode   String   @default("on_audio")
+  ttsVoice            String   @default("Kore")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model Conversation {
@@ -45,5 +47,7 @@ model Message {
   role           String
   content        String
   tokens         Int?
+  mediaType      String?      // "audio" | "image" | "document"
+  mediaCaption   String?      // transcrição ou descrição da mídia
   createdAt      DateTime     @default(now())
 }

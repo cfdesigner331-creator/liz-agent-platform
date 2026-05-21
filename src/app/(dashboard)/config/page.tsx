@@ -21,6 +21,8 @@ interface AgentConfig {
   groqModel: string;
   geminiApiKey: string;
   geminiModel: string;
+  audioResponseMode: string;
+  ttsVoice: string;
 }
 
 export default function ConfigPage() {
@@ -42,6 +44,8 @@ export default function ConfigPage() {
     groqModel: "llama-3.3-70b-versatile",
     geminiApiKey: "",
     geminiModel: "gemini-2.5-flash-lite",
+    audioResponseMode: "on_audio",
+    ttsVoice: "Kore",
   });
 
   const [loading, setLoading] = useState(true);
@@ -56,7 +60,7 @@ export default function ConfigPage() {
   const [copied, setCopied] = useState(false);
 
   // Active sub-tab
-  const [activeTab, setActiveTab] = useState<"ai" | "instructions" | "evolution">("ai");
+  const [activeTab, setActiveTab] = useState<"ai" | "instructions" | "evolution" | "voice">("ai");
 
   useEffect(() => {
     // Generate full webhook URL dynamically based on location
@@ -240,6 +244,17 @@ export default function ConfigPage() {
         >
           <i className="fa-brands fa-whatsapp mr-2 text-xs"></i>
           Configuração WhatsApp
+        </button>
+        <button
+          onClick={() => setActiveTab("voice")}
+          className={`pb-3 px-2 font-[var(--font-display)] text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
+            activeTab === "voice"
+              ? "border-purple-500 text-purple-400 font-bold"
+              : "border-transparent text-[var(--text-2)] hover:text-[var(--text-1)]"
+          }`}
+        >
+          <i className="fa-solid fa-microphone-lines mr-2 text-xs"></i>
+          Voz &amp; Mídia
         </button>
       </div>
 
@@ -612,6 +627,123 @@ export default function ConfigPage() {
                   * Deixe vazio para responder a QUALQUER número de WhatsApp recebido.
                 </span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: VOICE & MEDIA */}
+        {activeTab === "voice" && (
+          <div className="space-y-6 animate-fade-up">
+            {/* Audio Response Mode */}
+            <div className="card space-y-6">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-microphone-lines text-purple-400 text-xs"></i>
+                Modo de Resposta por Voz
+              </h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Define quando a Liz responde com uma <strong>nota de voz</strong> sintetizada pelo Gemini TTS em vez de texto.
+                O áudio é gerado em alta qualidade e enviado diretamente como mensagem de voz no WhatsApp.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { value: "never", label: "Nunca", icon: "fa-solid fa-ban", desc: "Sempre responde com texto, mesmo ao receber áudios." },
+                  { value: "on_audio", label: "Somente ao Receber Áudio", icon: "fa-solid fa-microphone", desc: "Responde com voz apenas quando o cliente mandar uma nota de voz." },
+                  { value: "always", label: "Sempre por Voz", icon: "fa-solid fa-volume-high", desc: "Todas as respostas serão notas de voz (com fallback para texto se o TTS falhar)." },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => updateField("audioResponseMode", opt.value)}
+                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-2 ${
+                      config.audioResponseMode === opt.value
+                        ? "bg-[rgba(168,85,247,0.08)] border-[rgba(168,85,247,0.4)] text-[var(--text-1)]"
+                        : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)] text-[var(--text-2)]"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-bold text-sm flex items-center gap-2 text-[var(--text-1)]">
+                        <i className={`${opt.icon} text-xs text-purple-400`}></i>
+                        {opt.label}
+                      </span>
+                      {config.audioResponseMode === opt.value && (
+                        <i className="fa-solid fa-circle-check text-purple-400 text-sm"></i>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[var(--text-3)] leading-relaxed">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* TTS Voice Selection */}
+            <div className="card space-y-6">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-waveform-lines text-purple-400 text-xs"></i>
+                Voz da Liz (Gemini TTS)
+              </h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Escolha a voz sintética usada pelo Gemini TTS. Cada voz possui timbre, entonação e ritmo únicos.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { name: "Kore", desc: "Feminina, calorosa", recommended: true },
+                  { name: "Aoede", desc: "Feminina, expressiva" },
+                  { name: "Zephyr", desc: "Feminina, suave" },
+                  { name: "Leda", desc: "Feminina, clara" },
+                  { name: "Puck", desc: "Masculina, jovial" },
+                  { name: "Charon", desc: "Masculina, profunda" },
+                  { name: "Fenrir", desc: "Masculina, firme" },
+                  { name: "Orbit", desc: "Masculina, neutra" },
+                ].map((voice) => (
+                  <button
+                    key={voice.name}
+                    type="button"
+                    onClick={() => updateField("ttsVoice", voice.name)}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1 relative ${
+                      config.ttsVoice === voice.name
+                        ? "bg-[rgba(168,85,247,0.1)] border-[rgba(168,85,247,0.4)] shadow-[0_0_12px_rgba(168,85,247,0.1)]"
+                        : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)]"
+                    }`}
+                  >
+                    {voice.recommended && (
+                      <span className="absolute top-1.5 right-1.5 text-[8px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.2)] border border-[rgba(168,85,247,0.3)] text-purple-400 font-bold">PADRÃO</span>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <i className={`fa-solid fa-circle text-[6px] ${config.ttsVoice === voice.name ? "text-purple-400" : "text-[var(--text-3)]"}`}></i>
+                      <span className={`font-bold text-sm ${config.ttsVoice === voice.name ? "text-purple-300" : "text-[var(--text-1)]"}`}>{voice.name}</span>
+                    </div>
+                    <span className="text-[10px] text-[var(--text-3)]">{voice.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Media Processing Info */}
+            <div className="card border-[rgba(168,85,247,0.1)] bg-[rgba(13,13,28,0.4)] space-y-4">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-sparkles text-purple-400 text-xs"></i>
+                Processamento de Mídia — Gemini Multimodal
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { icon: "fa-solid fa-microphone", color: "text-green-400", bg: "bg-[rgba(74,222,128,0.08)] border-[rgba(74,222,128,0.2)]", title: "Áudio & Notas de Voz", desc: "Transcrição automática de qualquer áudio recebido. A Liz entende e responde ao conteúdo falado." },
+                  { icon: "fa-solid fa-image", color: "text-blue-400", bg: "bg-[rgba(96,165,250,0.08)] border-[rgba(96,165,250,0.2)]", title: "Imagens", desc: "Análise visual completa via Gemini Vision — artes, estampas, referências de produto e muito mais." },
+                  { icon: "fa-solid fa-file-pdf", color: "text-red-400", bg: "bg-[rgba(248,113,113,0.08)] border-[rgba(248,113,113,0.2)]", title: "Documentos (PDF)", desc: "Leitura e extração de informações de PDFs, planilhas e outros arquivos enviados." },
+                ].map((item) => (
+                  <div key={item.title} className={`rounded-xl border p-4 ${item.bg} flex flex-col gap-2`}>
+                    <div className="flex items-center gap-2">
+                      <i className={`${item.icon} ${item.color} text-sm`}></i>
+                      <span className="font-bold text-xs text-[var(--text-1)]">{item.title}</span>
+                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.15)] border border-[rgba(168,85,247,0.2)] text-purple-400 font-bold">ATIVO</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-3)] leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-[var(--text-3)] border-t border-[var(--border)] pt-3">
+                <i className="fa-solid fa-circle-info mr-1 text-purple-400"></i>
+                O processamento de mídia requer a <strong className="text-[var(--text-2)]">Gemini API Key</strong> configurada na aba Provedores de IA.
+              </p>
             </div>
           </div>
         )}

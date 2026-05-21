@@ -78,6 +78,40 @@ function broadcast(type, payload) {
   });
 }
 
+// Endpoint para obter as configurações atuais em tempo real do process.env (sincronização VPS -> GUI)
+app.get('/api/settings', (req, res) => {
+  try {
+    const envMapping = {
+      'set-evolution-url': 'EVOLUTION_API_URL',
+      'set-evolution-key': 'EVOLUTION_API_KEY',
+      'set-instance-name': 'EVOLUTION_INSTANCE_NAME',
+      'set-webhook-crm': 'CRM_WEBHOOK_URL',
+      'set-gemini-key': 'GEMINI_API_KEY',
+      'set-redis-ttl': 'REDIS_LOCK_TTL',
+      'set-wait-time': 'DEBOUNCE_WAIT_SECONDS',
+      'set-postgres-url': 'DATABASE_URL',
+      'set-redis-url': 'REDIS_URL',
+      'agent-prompt-setting': 'GEMINI_LIZ_SYSTEM_PROMPT'
+    };
+
+    const config = {};
+    Object.keys(envMapping).forEach(guiId => {
+      const envKey = envMapping[guiId];
+      let val = process.env[envKey] || '';
+      // Desfaz tratamento de quebras de linha
+      if (val && typeof val === 'string') {
+        val = val.replace(/\\n/g, '\n');
+      }
+      config[guiId] = val;
+    });
+
+    res.status(200).json(config);
+  } catch (err) {
+    console.error('[Backend] Falha ao recuperar configurações:', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Endpoint para reconfigurar as chaves reais de acesso direto da interface do simulador
 app.post('/api/settings', async (req, res) => {
   try {

@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initExporter();
   initSettings();
   initRealtimeBridge();
-  syncSettingsWithBackend();
+  loadSettingsFromServer();
   
   // Render initial connection paths
   setTimeout(drawFlowLines, 100);
@@ -459,11 +459,16 @@ function loadStoredSettings() {
     if (val && el) el.value = val;
   });
 
-  // Atualiza o indicador visual do badge do Gemini na carga
   const geminiKey = localStorage.getItem('liz_set-gemini-key') || '';
+  const pgUrl = localStorage.getItem('liz_set-postgres-url') || '';
+  updateStatusBadges(geminiKey, pgUrl);
+}
+
+// Atualiza indicadores de badges na interface gráfica baseando-se no estado real do servidor
+function updateStatusBadges(geminiKey, pgUrl) {
   const geminiBadge = document.getElementById('status-gemini');
   if (geminiBadge) {
-    if (geminiKey.trim()) {
+    if (geminiKey && geminiKey.trim()) {
       geminiBadge.classList.add('active');
       geminiBadge.classList.remove('offline');
       geminiBadge.setAttribute('title', 'Gemini 2.5 Flash Lite conectado com chave real');
@@ -474,25 +479,64 @@ function loadStoredSettings() {
     }
   }
 
-  // Atualiza indicador visual do Cache & DB
-  const pgUrl = localStorage.getItem('liz_set-postgres-url') || '';
   const dbBadge = document.getElementById('status-database');
   if (dbBadge) {
-    if (pgUrl.trim()) {
+    // Só marca ativo em produção se a URL do Postgres não for o host mockado padrão
+    if (pgUrl && pgUrl.trim() && !pgUrl.includes('postgres-db')) {
       dbBadge.classList.add('active');
       dbBadge.classList.remove('offline');
-      dbBadge.setAttribute('title', 'Banco Postgres e Redis configurados');
+      dbBadge.setAttribute('title', 'Bancos PostgreSQL e Redis em produção conectados!');
     } else {
       dbBadge.classList.remove('active');
       dbBadge.classList.add('offline');
+      dbBadge.setAttribute('title', 'Executando em sandbox de simulação (bancos desconectados)');
     }
+  }
+}
+
+// Carrega chaves dinâmicas do backend (sincronização VPS -> GUI)
+async function loadSettingsFromServer() {
+  const fields = ['set-evolution-url', 'set-evolution-key', 'set-instance-name', 'set-webhook-crm', 'set-gemini-key', 'set-redis-ttl', 'set-wait-time', 'set-postgres-url', 'set-redis-url', 'agent-prompt-setting'];
+  
+  try {
+    addConsoleLog('[Express] Sincronizando variáveis de ambiente reais da VPS com a interface...', 'info');
+    const response = await fetch('/api/settings');
+    if (!response.ok) throw new Error(`Status HTTP: ${response.status}`);
+    
+    const config = await response.json();
+    
+    // Atualiza os inputs do formulário e o cache do localStorage
+    fields.forEach(id => {
+      const val = config[id];
+      const el = document.getElementById(id);
+      
+      if (el && val !== undefined && val !== null) {
+        el.value = val;
+      }
+      
+      if (val !== undefined && val !== null) {
+        localStorage.setItem(`liz_${id}`, val);
+      }
+    });
+
+    // Atualiza os status dos badges
+    updateStatusBadges(config['set-gemini-key'], config['set-postgres-url']);
+    addConsoleLog('[Express] Configurações de produção recuperadas com sucesso!', 'success');
+
+    if (window.refreshCodeDisplay) {
+      window.refreshCodeDisplay();
+    }
+  } catch (err) {
+    console.error('Erro na sincronização de boot com a API:', err);
+    addConsoleLog(`[Express] Erro na leitura dinâmica da API: ${err.message}. Restaurando cache offline.`, 'warning');
+    // Fallback offline
+    loadStoredSettings();
   }
 }
 
 function initSettings() {
   const saveBtn = document.getElementById('save-settings-btn');
   const resetBtn = document.querySelector('#tab-settings button[type="reset"]');
-  loadStoredSettings();
 
   saveBtn.addEventListener('click', async (e) => {
     e.preventDefault();
@@ -507,33 +551,11 @@ function initSettings() {
     });
 
     const geminiKey = document.getElementById('set-gemini-key').value.trim();
-    const geminiBadge = document.getElementById('status-gemini');
-    if (geminiBadge) {
-      if (geminiKey) {
-        geminiBadge.classList.add('active');
-        geminiBadge.classList.remove('offline');
-        geminiBadge.setAttribute('title', 'Gemini 2.5 Flash Lite conectado com chave real do usuário');
-      } else {
-        geminiBadge.classList.remove('active');
-        geminiBadge.classList.add('offline');
-        geminiBadge.setAttribute('title', 'Aguardando configuração da chave no painel de ajustes');
-      }
-    }
-
     const pgUrl = document.getElementById('set-postgres-url').value.trim();
-    const dbBadge = document.getElementById('status-database');
-    if (dbBadge) {
-      if (pgUrl) {
-        dbBadge.classList.add('active');
-        dbBadge.classList.remove('offline');
-      } else {
-        dbBadge.classList.remove('active');
-        dbBadge.classList.add('offline');
-      }
-    }
+    updateStatusBadges(geminiKey, pgUrl);
 
     try {
-      addConsoleLog('[Simulador] Enviando novas configurações para o backend Express...', 'info');
+      addConsoleLog('[Simulador] Gravando parâmetros no container e reiniciando pools...', 'info');
       const response = await fetch('/api/settings', {
         method: 'POST',
         headers: {
@@ -544,7 +566,7 @@ function initSettings() {
       const resData = await response.json();
       if (resData.success) {
         showToast("Ajustes salvos localmente e aplicados no backend com sucesso!");
-        addConsoleLog('[Express] Parâmetros salvos no .env físico e serviços reiniciados com sucesso!', 'success');
+        addConsoleLog('[Express] Parâmetros persistidos no .env físico e microsserviço reconectado!', 'success');
       } else {
         showToast(`Erro ao aplicar ajustes: ${resData.error}`, 'danger');
         addConsoleLog(`[Express] Erro ao reconfigurar chaves: ${resData.error}`, 'danger');
@@ -628,13 +650,7 @@ Assim que tiver todas as informações básicas coletadas (Nome, Produto, Quanti
           }
         });
 
-        const geminiBadge = document.getElementById('status-gemini');
-        if (geminiBadge) {
-          geminiBadge.classList.remove('active');
-          geminiBadge.classList.add('offline');
-          geminiBadge.setAttribute('title', 'Aguardando configuração da chave no painel de ajustes');
-        }
-
+        updateStatusBadges(defaults['set-gemini-key'], defaults['set-postgres-url']);
         showToast("Configurações padrão restauradas!", "success");
         if (window.refreshCodeDisplay) window.refreshCodeDisplay();
 
@@ -652,66 +668,6 @@ Assim que tiver todas as informações básicas coletadas (Nome, Produto, Quanti
         }
       }
     });
-  }
-}
-
-function initRealtimeBridge() {
-  addConsoleLog('[SSE] Conectando ao canal de eventos em tempo real do Express...', 'info');
-  const evtSource = new EventSource('/api/events');
-  
-  evtSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-      if (data.type === 'log') {
-        addConsoleLog(data.message, data.logType || 'info');
-      } else if (data.type === 'node-highlight') {
-        highlightNode(data.nodeId, data.duration || 600);
-      } else if (data.type === 'connection-animate') {
-        animateConnection(data.fromNodeId, data.toNodeId, data.duration || 300);
-      } else if (data.type === 'chat-message') {
-        const direction = data.role === 'model' ? 'incoming' : 'outgoing';
-        appendMessage(data.content, direction, data.mediaUrl);
-      } else if (data.type === 'sys-status') {
-        addConsoleLog(data.message, 'system');
-      }
-    } catch (err) {
-      console.error('Erro ao decodificar evento SSE:', err);
-    }
-  };
-
-  evtSource.onerror = (err) => {
-    console.error('Falha na conexão do EventSource:', err);
-  };
-}
-
-async function syncSettingsWithBackend() {
-  const fields = ['set-evolution-url', 'set-evolution-key', 'set-instance-name', 'set-webhook-crm', 'set-gemini-key', 'set-redis-ttl', 'set-wait-time', 'set-postgres-url', 'set-redis-url', 'agent-prompt-setting'];
-  const config = {};
-  let hasData = false;
-  fields.forEach(id => {
-    const val = localStorage.getItem(`liz_${id}`);
-    if (val !== null) {
-      config[id] = val;
-      hasData = true;
-    }
-  });
-
-  if (hasData) {
-    try {
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(config)
-      });
-      const data = await response.json();
-      if (data.success) {
-        addConsoleLog('[Express] Configurações persistidas sincronizadas com o backend com sucesso.', 'success');
-      }
-    } catch (err) {
-      console.error('Erro na sincronização de boot:', err);
-    }
   }
 }
 

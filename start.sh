@@ -7,8 +7,11 @@ echo "[Start] Iniciando container da Plataforma Liz..."
 node migrate.mjs
 
 # Executa o servidor standalone compilado pelo Next.js se disponível
-if [ -f .next/standalone/server.js ]; then
-  echo "[Start] Iniciando servidor standalone Next.js em produção..."
+if [ -f server.js ]; then
+  echo "[Start] Iniciando servidor standalone Next.js em produção (root)..."
+  exec node server.js
+elif [ -f .next/standalone/server.js ]; then
+  echo "[Start] Iniciando servidor standalone Next.js em produção (.next)..."
   exec node .next/standalone/server.js
 else
   echo "[Start] Servidor standalone não encontrado. Iniciando via npm run start..."

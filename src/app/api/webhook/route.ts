@@ -11,7 +11,11 @@ import {
   generateSpeechWithGemini,
 } from "@/lib/media";
 
+// Cache estático de mensagens em processamento concorrente para desduplicação
+const activeMessageIds = new Set<string>();
+
 export async function POST(req: Request) {
+  let messageIdToClean: string | null = null;
   try {
     const body = await req.json();
     const { event, data } = body;
@@ -21,11 +25,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: "evento_nao_suportado" });
     }
 
-    if (!data || !data.key || !data.key.remoteJid) {
-      return NextResponse.json({ ok: true, ignored: "payload_incompleto_ou_sem_remoteJid" });
+    if (!data || !data.key || !data.key.remoteJid || !data.key.id) {
+      return NextResponse.json({ ok: true, ignored: "payload_incompleto" });
     }
 
-    const { remoteJid, fromMe } = data.key;
+    const { remoteJid, fromMe, id: messageId } = data.key;
 
     // 2. Ignorar mensagens enviadas por nós mesmos
     if (fromMe === true) {
@@ -35,6 +39,31 @@ export async function POST(req: Request) {
     // 3. Ignorar grupos
     if (remoteJid.includes("@g.us")) {
       return NextResponse.json({ ok: true, ignored: "mensagem_grupo" });
+    }
+
+    // 3.1. Evitar duplicados (Desduplicação e Idempotência)
+    // Camada 1: Em memória (In-Flight Concorrente)
+    if (activeMessageIds.has(messageId)) {
+      console.log(`[Webhook] Ignorando mensagem concorrente (em processamento): ${messageId}`);
+      return NextResponse.json({ ok: true, ignored: "duplicado_in_flight", messageId });
+    }
+
+    // Camada 2: Histórico definitivo no Banco (SQLite)
+    const existingMsg = await prisma.message.findUnique({
+      where: { id: messageId }
+    });
+    if (existingMsg) {
+      console.log(`[Webhook] Ignorando mensagem duplicada (já processada e salva): ${messageId}`);
+      return NextResponse.json({ ok: true, ignored: "duplicado_db", messageId });
+    }
+
+    // Registrar no cache concorrente
+    activeMessageIds.add(messageId);
+    messageIdToClean = messageId;
+
+    // Prevenção de vazamento de memória (Memory Leak Limit)
+    if (activeMessageIds.size > 1000) {
+      activeMessageIds.clear();
     }
 
     const phone = remoteJid.replace("@s.whatsapp.net", "");
@@ -259,9 +288,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // 11. Salvar mensagem do usuário com metadados de mídia
+    // 11. Salvar mensagem do usuário com metadados de mídia e ID único do WhatsApp (para idempotência)
     await prisma.message.create({
       data: {
+        id: messageId,
         conversationId: conversation.id,
         role: "user",
         content: textToSave,
@@ -406,5 +436,9 @@ export async function POST(req: Request) {
   } catch (err: any) {
     console.error("[Webhook Error] Falha fatal no webhook:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
+  } finally {
+    if (messageIdToClean) {
+      activeMessageIds.delete(messageIdToClean);
+    }
   }
 }

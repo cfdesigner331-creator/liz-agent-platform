@@ -71,7 +71,12 @@ function sanitizeConfig(config: any) {
     scheduleDays: (config as any).scheduleDays || "[1,2,3,4,5]",
     scheduleStartTime: (config as any).scheduleStartTime || "08:00",
     scheduleEndTime: (config as any).scheduleEndTime || "18:00",
-    scheduleOffMessage: (config as any).scheduleOffMessage || "Ol\u00e1! No momento estou fora do hor\u00e1rio de atendimento. Em breve retornarei! \ud83d\ude0a",
+    scheduleOffMessage: (config as any).scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊",
+    scheduleMode: (config as any).scheduleMode || "normal",
+    schedulePlantaoStart1: (config as any).schedulePlantaoStart1 || "07:30",
+    schedulePlantaoEnd1: (config as any).schedulePlantaoEnd1 || "12:00",
+    schedulePlantaoStart2: (config as any).schedulePlantaoStart2 || "13:00",
+    schedulePlantaoEnd2: (config as any).schedulePlantaoEnd2 || "17:30",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -103,7 +108,12 @@ export async function GET(req: Request) {
           scheduleDays: "[1,2,3,4,5]",
           scheduleStartTime: "08:00",
           scheduleEndTime: "18:00",
-          scheduleOffMessage: "Ol\u00e1! No momento estou fora do hor\u00e1rio de atendimento. Em breve retornarei! \ud83d\ude0a",
+          scheduleOffMessage: "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊",
+          scheduleMode: "normal",
+          schedulePlantaoStart1: "07:30",
+          schedulePlantaoEnd1: "12:00",
+          schedulePlantaoStart2: "13:00",
+          schedulePlantaoEnd2: "17:30",
         },
       });
     }
@@ -149,7 +159,12 @@ export async function PUT(req: Request) {
       scheduleDays: configData.scheduleDays || "[1,2,3,4,5]",
       scheduleStartTime: configData.scheduleStartTime || "08:00",
       scheduleEndTime: configData.scheduleEndTime || "18:00",
-      scheduleOffMessage: configData.scheduleOffMessage || "Ol\u00e1! No momento estou fora do hor\u00e1rio de atendimento. Em breve retornarei! \ud83d\ude0a",
+      scheduleOffMessage: configData.scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊",
+      scheduleMode: configData.scheduleMode || "normal",
+      schedulePlantaoStart1: configData.schedulePlantaoStart1 || "07:30",
+      schedulePlantaoEnd1: configData.schedulePlantaoEnd1 || "12:00",
+      schedulePlantaoStart2: configData.schedulePlantaoStart2 || "13:00",
+      schedulePlantaoEnd2: configData.schedulePlantaoEnd2 || "17:30",
     };
 
     let config = await prisma.agentConfig.findFirst();

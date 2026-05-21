@@ -89,43 +89,84 @@ export async function POST(req: Request) {
       const currentMinutes = nowInTz.getMinutes();
       const currentTimeMinutes = currentHours * 60 + currentMinutes;
 
-      // Parse dos dias da semana permitidos (ex: "[1,2,3,4,5]")
-      let allowedDays: number[] = [1, 2, 3, 4, 5];
-      try {
-        allowedDays = JSON.parse((config as any).scheduleDays || "[1,2,3,4,5]");
-      } catch (e) {
-        console.error("[Webhook] Erro ao parsear scheduleDays:", e);
-      }
+      const mode = (config as any).scheduleMode || "normal";
 
-      // Parse do horário de início (ex: "08:00")
-      let startMinutes = 8 * 60; // 08:00
-      const startParts = ((config as any).scheduleStartTime || "08:00").split(":");
-      if (startParts.length === 2) {
-        startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-      }
+      if (mode === "plantao") {
+        // Modo Plantão / Pós-Horário: Silenciado nos horários comerciais de segunda a sexta (humanos atendendo)
+        const isWeekday = currentDay >= 1 && currentDay <= 5;
+        if (isWeekday) {
+          // Parse janela 1 (Manhã, ex: "07:30" às "12:00")
+          let pStartMinutes1 = 7 * 60 + 30;
+          const pStartParts1 = ((config as any).schedulePlantaoStart1 || "07:30").split(":");
+          if (pStartParts1.length === 2) {
+            pStartMinutes1 = parseInt(pStartParts1[0]) * 60 + parseInt(pStartParts1[1]);
+          }
 
-      // Parse do horário de fim (ex: "18:00")
-      let endMinutes = 18 * 60; // 18:00
-      const endParts = ((config as any).scheduleEndTime || "18:00").split(":");
-      if (endParts.length === 2) {
-        endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-      }
+          let pEndMinutes1 = 12 * 60;
+          const pEndParts1 = ((config as any).schedulePlantaoEnd1 || "12:00").split(":");
+          if (pEndParts1.length === 2) {
+            pEndMinutes1 = parseInt(pEndParts1[0]) * 60 + parseInt(pEndParts1[1]);
+          }
 
-      const isDayAllowed = allowedDays.includes(currentDay);
-      const isTimeAllowed = currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
+          // Parse janela 2 (Tarde, ex: "13:00" às "17:30")
+          let pStartMinutes2 = 13 * 60;
+          const pStartParts2 = ((config as any).schedulePlantaoStart2 || "13:00").split(":");
+          if (pStartParts2.length === 2) {
+            pStartMinutes2 = parseInt(pStartParts2[0]) * 60 + parseInt(pStartParts2[1]);
+          }
 
-      if (!isDayAllowed || !isTimeAllowed) {
-        console.log(`[Webhook] Fora do expediente. Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}. Enviando mensagem de ausência.`);
-        if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
-          await sendWhatsAppMessage(
-            config.evolutionUrl,
-            config.evolutionApiKey,
-            config.instanceId,
-            remoteJid,
-            (config as any).scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"
-          );
+          let pEndMinutes2 = 17 * 60 + 30;
+          const pEndParts2 = ((config as any).schedulePlantaoEnd2 || "17:30").split(":");
+          if (pEndParts2.length === 2) {
+            pEndMinutes2 = parseInt(pEndParts2[0]) * 60 + parseInt(pEndParts2[1]);
+          }
+
+          const inWindow1 = currentTimeMinutes >= pStartMinutes1 && currentTimeMinutes <= pEndMinutes1;
+          const inWindow2 = currentTimeMinutes >= pStartMinutes2 && currentTimeMinutes <= pEndMinutes2;
+
+          if (inWindow1 || inWindow2) {
+            console.log(`[Webhook] Silenciador Plantão: Humanos atendendo. Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}. Bot ignorado.`);
+            return NextResponse.json({ ok: true, ignored: "silenciador_plantao_humanos" });
+          }
         }
-        return NextResponse.json({ ok: true, ignored: "fora_de_horario" });
+        // Fins de semana e horários fora das janelas (ex: almoço e noites) -> bot atende normalmente
+      } else {
+        // Modo Comercial Tradicional
+        let allowedDays: number[] = [1, 2, 3, 4, 5];
+        try {
+          allowedDays = JSON.parse((config as any).scheduleDays || "[1,2,3,4,5]");
+        } catch (e) {
+          console.error("[Webhook] Erro ao parsear scheduleDays:", e);
+        }
+
+        let startMinutes = 8 * 60; // 08:00
+        const startParts = ((config as any).scheduleStartTime || "08:00").split(":");
+        if (startParts.length === 2) {
+          startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+        }
+
+        let endMinutes = 18 * 60; // 18:00
+        const endParts = ((config as any).scheduleEndTime || "18:00").split(":");
+        if (endParts.length === 2) {
+          endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+        }
+
+        const isDayAllowed = allowedDays.includes(currentDay);
+        const isTimeAllowed = currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
+
+        if (!isDayAllowed || !isTimeAllowed) {
+          console.log(`[Webhook] Fora do expediente. Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}. Enviando mensagem de ausência.`);
+          if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
+            await sendWhatsAppMessage(
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              (config as any).scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"
+            );
+          }
+          return NextResponse.json({ ok: true, ignored: "fora_de_horario" });
+        }
       }
     }
 

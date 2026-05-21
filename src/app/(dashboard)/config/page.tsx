@@ -29,6 +29,11 @@ interface AgentConfig {
   scheduleStartTime: string;
   scheduleEndTime: string;
   scheduleOffMessage: string;
+  scheduleMode?: string;
+  schedulePlantaoStart1?: string;
+  schedulePlantaoEnd1?: string;
+  schedulePlantaoStart2?: string;
+  schedulePlantaoEnd2?: string;
 }
 
 export default function ConfigPage() {
@@ -58,6 +63,11 @@ export default function ConfigPage() {
     scheduleStartTime: "08:00",
     scheduleEndTime: "18:00",
     scheduleOffMessage: "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊",
+    scheduleMode: "normal",
+    schedulePlantaoStart1: "07:30",
+    schedulePlantaoEnd1: "12:00",
+    schedulePlantaoStart2: "13:00",
+    schedulePlantaoEnd2: "17:30",
   });
 
   const [loading, setLoading] = useState(true);
@@ -799,111 +809,294 @@ export default function ConfigPage() {
               </div>
 
               <p className="text-xs text-[var(--text-2)] leading-relaxed">
-                Quando ativado, o agente responderá normalmente apenas nos dias e horários selecionados abaixo. 
-                Fora do horário definido, o agente enviará automaticamente uma mensagem de ausência personalizada.
+                Quando ativado, você pode definir se o agente funcionará em modo comercial comum (atendendo apenas nas horas de expediente) ou em Modo Plantão pós-horário (cobrindo almoços, noites e finais de semana).
               </p>
 
               {config.scheduleEnabled && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-fade-up">
-                  {/* Horários de Início e Fim */}
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold text-[var(--text-2)]">Horário de Início</label>
-                        <input
-                          type="time"
-                          value={config.scheduleStartTime}
-                          onChange={(e) => updateField("scheduleStartTime", e.target.value)}
-                          className="field-input text-xs"
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold text-[var(--text-2)]">Horário de Fim</label>
-                        <input
-                          type="time"
-                          value={config.scheduleEndTime}
-                          onChange={(e) => updateField("scheduleEndTime", e.target.value)}
-                          className="field-input text-xs"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-semibold text-[var(--text-2)]">Fuso Horário (Timezone)</label>
-                      <select
-                        value={config.scheduleTimezone}
-                        onChange={(e) => updateField("scheduleTimezone", e.target.value)}
-                        className="field-input text-xs bg-[#090914] cursor-pointer"
+                <div className="space-y-6 pt-2 animate-fade-up">
+                  {/* Seletor de Modo */}
+                  <div className="space-y-3">
+                    <label className="text-[11px] uppercase font-bold tracking-wider text-[var(--text-3)] block">
+                      Modo de Operação do Cronograma
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => updateField("scheduleMode", "normal")}
+                        className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-2 ${
+                          (config.scheduleMode || "normal") === "normal"
+                            ? "bg-[rgba(245,158,11,0.06)] border-[rgba(245,158,11,0.3)] text-[var(--text-1)]"
+                            : "bg-[#090914] border-[var(--border)] text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.01)]"
+                        }`}
                       >
-                        <option value="America/Sao_Paulo">America/Sao_Paulo (Horário de Brasília)</option>
-                        <option value="America/Bahia">America/Bahia</option>
-                        <option value="America/Manaus">America/Manaus</option>
-                        <option value="America/New_York">America/New_York (EST)</option>
-                        <option value="Europe/Lisbon">Europe/Lisbon (WET)</option>
-                        <option value="Europe/London">Europe/London (GMT)</option>
-                      </select>
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-bold text-sm flex items-center gap-2 text-[var(--text-1)]">
+                            <i className="fa-solid fa-briefcase text-amber-500 text-xs"></i>
+                            Expediente Comercial Comum
+                          </span>
+                          {(config.scheduleMode || "normal") === "normal" && (
+                            <i className="fa-solid fa-circle-check text-amber-500 text-sm"></i>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                          A Liz responde apenas no horário comercial configurado e envia mensagem de ausência nos demais horários.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateField("scheduleMode", "plantao")}
+                        className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-2 ${
+                          config.scheduleMode === "plantao"
+                            ? "bg-[rgba(168,85,247,0.06)] border-[rgba(168,85,247,0.3)] text-[var(--text-1)]"
+                            : "bg-[#090914] border-[var(--border)] text-[var(--text-2)] hover:bg-[rgba(255,255,255,0.01)]"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-bold text-sm flex items-center gap-2 text-[var(--text-1)]">
+                            <i className="fa-solid fa-shield-halved text-purple-400 text-xs"></i>
+                            Modo Plantão / Pós-Horário
+                          </span>
+                          {config.scheduleMode === "plantao" && (
+                            <i className="fa-solid fa-circle-check text-purple-400 text-sm"></i>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                          A Liz atende noites, almoços e fins de semana. Ela silencia totalmente no expediente comercial para que humanos atendam.
+                        </span>
+                      </button>
                     </div>
                   </div>
 
-                  {/* Dias da Semana */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-[var(--text-2)]">Dias de Atendimento</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { num: 1, name: "Segunda-feira" },
-                        { num: 2, name: "Terça-feira" },
-                        { num: 3, name: "Quarta-feira" },
-                        { num: 4, name: "Quinta-feira" },
-                        { num: 5, name: "Sexta-feira" },
-                        { num: 6, name: "Sábado" },
-                        { num: 0, name: "Domingo" },
-                      ].map((day) => {
-                        let daysList: number[] = [];
-                        try {
-                          daysList = JSON.parse(config.scheduleDays || "[1,2,3,4,5]");
-                        } catch (e) {
-                          daysList = [1, 2, 3, 4, 5];
-                        }
-                        const isChecked = daysList.includes(day.num);
-                        return (
-                          <button
-                            key={day.num}
-                            type="button"
-                            onClick={() => {
-                              let newList = [...daysList];
-                              if (newList.includes(day.num)) {
-                                newList = newList.filter((d) => d !== day.num);
-                              } else {
-                                newList.push(day.num);
-                                newList.sort();
-                              }
-                              updateField("scheduleDays", JSON.stringify(newList));
-                            }}
-                            className={`p-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${
-                              isChecked
-                                ? "bg-[rgba(245,158,11,0.06)] border-[rgba(245,158,11,0.3)] text-[var(--text-1)] font-semibold"
-                                : "bg-[#090914] border-[var(--border)] text-[var(--text-3)]"
-                            }`}
+                  {/* Configurações do Modo Comercial Comum */}
+                  {(config.scheduleMode || "normal") === "normal" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[var(--border)] animate-fade-up">
+                      {/* Horários de Início e Fim */}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-[var(--text-2)]">Horário de Início</label>
+                            <input
+                              type="time"
+                              value={config.scheduleStartTime}
+                              onChange={(e) => updateField("scheduleStartTime", e.target.value)}
+                              className="field-input text-xs"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-[var(--text-2)]">Horário de Fim</label>
+                            <input
+                              type="time"
+                              value={config.scheduleEndTime}
+                              onChange={(e) => updateField("scheduleEndTime", e.target.value)}
+                              className="field-input text-xs"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold text-[var(--text-2)]">Fuso Horário (Timezone)</label>
+                          <select
+                            value={config.scheduleTimezone}
+                            onChange={(e) => updateField("scheduleTimezone", e.target.value)}
+                            className="field-input text-xs bg-[#090914] cursor-pointer"
                           >
-                            <span>{day.name}</span>
-                            {isChecked ? (
-                              <i className="fa-solid fa-circle-check text-amber-500 text-xs"></i>
-                            ) : (
-                              <i className="fa-regular fa-circle text-[10px] text-[var(--text-3)]"></i>
-                            )}
-                          </button>
-                        );
-                      })}
+                            <option value="America/Sao_Paulo">America/Sao_Paulo (Horário de Brasília)</option>
+                            <option value="America/Bahia">America/Bahia</option>
+                            <option value="America/Manaus">America/Manaus</option>
+                            <option value="America/New_York">America/New_York (EST)</option>
+                            <option value="Europe/Lisbon">Europe/Lisbon (WET)</option>
+                            <option value="Europe/London">Europe/London (GMT)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Dias da Semana */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-[var(--text-2)]">Dias de Atendimento</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { num: 1, name: "Segunda-feira" },
+                            { num: 2, name: "Terça-feira" },
+                            { num: 3, name: "Quarta-feira" },
+                            { num: 4, name: "Quinta-feira" },
+                            { num: 5, name: "Sexta-feira" },
+                            { num: 6, name: "Sábado" },
+                            { num: 0, name: "Domingo" },
+                          ].map((day) => {
+                            let daysList: number[] = [];
+                            try {
+                              daysList = JSON.parse(config.scheduleDays || "[1,2,3,4,5]");
+                            } catch (e) {
+                              daysList = [1, 2, 3, 4, 5];
+                            }
+                            const isChecked = daysList.includes(day.num);
+                            return (
+                              <button
+                                key={day.num}
+                                type="button"
+                                onClick={() => {
+                                  let newList = [...daysList];
+                                  if (newList.includes(day.num)) {
+                                    newList = newList.filter((d) => d !== day.num);
+                                  } else {
+                                    newList.push(day.num);
+                                    newList.sort();
+                                  }
+                                  updateField("scheduleDays", JSON.stringify(newList));
+                                }}
+                                className={`p-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${
+                                  isChecked
+                                    ? "bg-[rgba(245,158,11,0.06)] border-[rgba(245,158,11,0.3)] text-[var(--text-1)] font-semibold"
+                                    : "bg-[#090914] border-[var(--border)] text-[var(--text-3)]"
+                                }`}
+                              >
+                                <span>{day.name}</span>
+                                {isChecked ? (
+                                  <i className="fa-solid fa-circle-check text-amber-500 text-xs"></i>
+                                ) : (
+                                  <i className="fa-regular fa-circle text-[10px] text-[var(--text-3)]"></i>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Configurações do Modo Plantão */}
+                  {config.scheduleMode === "plantao" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[var(--border)] animate-fade-up">
+                      {/* Inputs das Janelas de Silêncio */}
+                      <div className="space-y-4">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-2)] block">
+                          Janelas de Silêncio (Expediente dos Humanos)
+                        </span>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Manhã - Início</label>
+                            <input
+                              type="time"
+                              value={config.schedulePlantaoStart1 || "07:30"}
+                              onChange={(e) => updateField("schedulePlantaoStart1", e.target.value)}
+                              className="field-input text-xs"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Manhã - Fim</label>
+                            <input
+                              type="time"
+                              value={config.schedulePlantaoEnd1 || "12:00"}
+                              onChange={(e) => updateField("schedulePlantaoEnd1", e.target.value)}
+                              className="field-input text-xs"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Tarde - Início</label>
+                            <input
+                              type="time"
+                              value={config.schedulePlantaoStart2 || "13:00"}
+                              onChange={(e) => updateField("schedulePlantaoStart2", e.target.value)}
+                              className="field-input text-xs"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Tarde - Fim</label>
+                            <input
+                              type="time"
+                              value={config.schedulePlantaoEnd2 || "17:30"}
+                              onChange={(e) => updateField("schedulePlantaoEnd2", e.target.value)}
+                              className="field-input text-xs"
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold text-[var(--text-2)]">Fuso Horário (Timezone)</label>
+                          <select
+                            value={config.scheduleTimezone}
+                            onChange={(e) => updateField("scheduleTimezone", e.target.value)}
+                            className="field-input text-xs bg-[#090914] cursor-pointer"
+                          >
+                            <option value="America/Sao_Paulo">America/Sao_Paulo (Horário de Brasília)</option>
+                            <option value="America/Bahia">America/Bahia</option>
+                            <option value="America/Manaus">America/Manaus</option>
+                            <option value="America/New_York">America/New_York (EST)</option>
+                            <option value="Europe/Lisbon">Europe/Lisbon (WET)</option>
+                            <option value="Europe/London">Europe/London (GMT)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Card de Resumo Explicativo Premium */}
+                      <div className="rounded-xl border border-[rgba(168,85,247,0.15)] bg-[rgba(13,13,28,0.3)] p-5 flex flex-col gap-3 shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
+                        <div className="flex items-center gap-2 pb-2 border-b border-[var(--border)]">
+                          <i className="fa-solid fa-circle-info text-purple-400 text-xs"></i>
+                          <span className="font-bold text-xs text-[var(--text-1)]">Turnos de Atendimento (Liz)</span>
+                          <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.15)] border border-[rgba(168,85,247,0.25)] text-purple-400 font-bold">PLANTÃO ATIVO</span>
+                        </div>
+
+                        <div className="space-y-3.5 text-xs text-[var(--text-2)]">
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-base shrink-0">🌙</span>
+                            <div>
+                              <strong className="text-[var(--text-1)] block text-xs">Pós-Horário e Noites:</strong>
+                              <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
+                                Segunda a sexta: das <strong className="text-[var(--text-2)]">{config.schedulePlantaoEnd2 || "17:30"}</strong> do dia até às <strong className="text-[var(--text-2)]">{config.schedulePlantaoStart1 || "07:30"}</strong> da manhã seguinte.
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-base shrink-0">🍕</span>
+                            <div>
+                              <strong className="text-[var(--text-1)] block text-xs">Intervalo de Almoço:</strong>
+                              <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
+                                Segunda a sexta: das <strong className="text-[var(--text-2)]">{config.schedulePlantaoEnd1 || "12:00"}</strong> às <strong className="text-[var(--text-2)]">{config.schedulePlantaoStart2 || "13:00"}</strong>.
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-base shrink-0">🏖️</span>
+                            <div>
+                              <strong className="text-[var(--text-1)] block text-xs">Finais de Semana:</strong>
+                              <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
+                                Sábado e Domingo inteiros (atendimento ininterrupto 24 horas por dia).
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5 border-t border-[var(--border)] pt-3 mt-1">
+                            <span className="text-base shrink-0">🤫</span>
+                            <div>
+                              <strong className="text-purple-400 block text-xs">Silenciador Ativo (Humanos Atendendo):</strong>
+                              <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
+                                A Liz ignorará silenciosamente mensagens recebidas de segunda a sexta entre <strong className="text-[var(--text-2)]">{config.schedulePlantaoStart1 || "07:30"}-{config.schedulePlantaoEnd1 || "12:00"}</strong> e <strong className="text(--text-2)">{config.schedulePlantaoStart2 || "13:00"}-{config.schedulePlantaoEnd2 || "17:30"}</strong> para que sua equipe atenda sem duplicidade.
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Mensagem de Ausência */}
-            {config.scheduleEnabled && (
+            {/* Mensagem de Ausência (Ocultada em Modo Plantão já que lá é ignore silencioso) */}
+            {config.scheduleEnabled && (config.scheduleMode || "normal") === "normal" && (
               <div className="card space-y-4 animate-fade-up">
                 <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
                   <i className="fa-solid fa-message text-amber-400 text-xs"></i>

@@ -58,6 +58,17 @@ try {
         "geminiModel" TEXT NOT NULL DEFAULT 'gemini-2.5-flash-lite',
         "audioResponseMode" TEXT NOT NULL DEFAULT 'on_audio',
         "ttsVoice" TEXT NOT NULL DEFAULT 'Kore',
+        "scheduleEnabled" BOOLEAN NOT NULL DEFAULT false,
+        "scheduleTimezone" TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
+        "scheduleDays" TEXT NOT NULL DEFAULT '[1,2,3,4,5]',
+        "scheduleStartTime" TEXT NOT NULL DEFAULT '08:00',
+        "scheduleEndTime" TEXT NOT NULL DEFAULT '18:00',
+        "scheduleOffMessage" TEXT NOT NULL DEFAULT 'Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊',
+        "scheduleMode" TEXT NOT NULL DEFAULT 'normal',
+        "schedulePlantaoStart1" TEXT NOT NULL DEFAULT '07:30',
+        "schedulePlantaoEnd1" TEXT NOT NULL DEFAULT '12:00',
+        "schedulePlantaoStart2" TEXT NOT NULL DEFAULT '13:00',
+        "schedulePlantaoEnd2" TEXT NOT NULL DEFAULT '17:30',
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -134,6 +145,26 @@ try {
     if (!columns.includes("scheduleOffMessage")) {
       console.log("[Migrate] Adicionando coluna 'scheduleOffMessage' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleOffMessage" TEXT NOT NULL DEFAULT "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"').run();
+    }
+    if (!columns.includes("scheduleMode")) {
+      console.log("[Migrate] Adicionando coluna 'scheduleMode' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleMode" TEXT NOT NULL DEFAULT "normal"').run();
+    }
+    if (!columns.includes("schedulePlantaoStart1")) {
+      console.log("[Migrate] Adicionando coluna 'schedulePlantaoStart1' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "schedulePlantaoStart1" TEXT NOT NULL DEFAULT "07:30"').run();
+    }
+    if (!columns.includes("schedulePlantaoEnd1")) {
+      console.log("[Migrate] Adicionando coluna 'schedulePlantaoEnd1' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "schedulePlantaoEnd1" TEXT NOT NULL DEFAULT "12:00"').run();
+    }
+    if (!columns.includes("schedulePlantaoStart2")) {
+      console.log("[Migrate] Adicionando coluna 'schedulePlantaoStart2' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "schedulePlantaoStart2" TEXT NOT NULL DEFAULT "13:00"').run();
+    }
+    if (!columns.includes("schedulePlantaoEnd2")) {
+      console.log("[Migrate] Adicionando coluna 'schedulePlantaoEnd2' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "schedulePlantaoEnd2" TEXT NOT NULL DEFAULT "17:30"').run();
     }
 
     // Message table new columns

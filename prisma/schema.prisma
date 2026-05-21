@@ -33,6 +33,11 @@ model AgentConfig {
   scheduleStartTime   String   @default("08:00")
   scheduleEndTime     String   @default("18:00")
   scheduleOffMessage  String   @default("Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊")
+  scheduleMode        String   @default("normal")
+  schedulePlantaoStart1 String @default("07:30")
+  schedulePlantaoEnd1   String @default("12:00")
+  schedulePlantaoStart2 String @default("13:00")
+  schedulePlantaoEnd2   String @default("17:30")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

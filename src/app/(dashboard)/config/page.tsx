@@ -23,6 +23,12 @@ interface AgentConfig {
   geminiModel: string;
   audioResponseMode: string;
   ttsVoice: string;
+  scheduleEnabled: boolean;
+  scheduleTimezone: string;
+  scheduleDays: string;
+  scheduleStartTime: string;
+  scheduleEndTime: string;
+  scheduleOffMessage: string;
 }
 
 export default function ConfigPage() {
@@ -46,6 +52,12 @@ export default function ConfigPage() {
     geminiModel: "gemini-2.5-flash-lite",
     audioResponseMode: "on_audio",
     ttsVoice: "Kore",
+    scheduleEnabled: false,
+    scheduleTimezone: "America/Sao_Paulo",
+    scheduleDays: "[1,2,3,4,5]",
+    scheduleStartTime: "08:00",
+    scheduleEndTime: "18:00",
+    scheduleOffMessage: "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊",
   });
 
   const [loading, setLoading] = useState(true);
@@ -60,7 +72,7 @@ export default function ConfigPage() {
   const [copied, setCopied] = useState(false);
 
   // Active sub-tab
-  const [activeTab, setActiveTab] = useState<"ai" | "instructions" | "evolution" | "voice">("ai");
+  const [activeTab, setActiveTab] = useState<"ai" | "instructions" | "evolution" | "voice" | "schedule">("ai");
 
   useEffect(() => {
     // Generate full webhook URL dynamically based on location
@@ -246,6 +258,7 @@ export default function ConfigPage() {
           Configuração WhatsApp
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab("voice")}
           className={`pb-3 px-2 font-[var(--font-display)] text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
             activeTab === "voice"
@@ -255,6 +268,18 @@ export default function ConfigPage() {
         >
           <i className="fa-solid fa-microphone-lines mr-2 text-xs"></i>
           Voz &amp; Mídia
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("schedule")}
+          className={`pb-3 px-2 font-[var(--font-display)] text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
+            activeTab === "schedule"
+              ? "border-amber-500 text-amber-400 font-bold"
+              : "border-transparent text-[var(--text-2)] hover:text-[var(--text-1)]"
+          }`}
+        >
+          <i className="fa-solid fa-clock mr-2 text-xs"></i>
+          Horário de Atendimento
         </button>
       </div>
 
@@ -745,6 +770,157 @@ export default function ConfigPage() {
                 O processamento de mídia requer a <strong className="text-[var(--text-2)]">Gemini API Key</strong> configurada na aba Provedores de IA.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* TAB 5: HORÁRIO DE ATENDIMENTO */}
+        {activeTab === "schedule" && (
+          <div className="space-y-6 animate-fade-up">
+            {/* Ativação do Horário */}
+            <div className="card space-y-6">
+              <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
+                <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] flex items-center gap-2">
+                  <i className="fa-solid fa-clock text-amber-400 text-xs"></i>
+                  Horário de Funcionamento do Agente
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => updateField("scheduleEnabled", !config.scheduleEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
+                    config.scheduleEnabled ? "bg-amber-500" : "bg-[#1C1C38]"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      config.scheduleEnabled ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Quando ativado, o agente responderá normalmente apenas nos dias e horários selecionados abaixo. 
+                Fora do horário definido, o agente enviará automaticamente uma mensagem de ausência personalizada.
+              </p>
+
+              {config.scheduleEnabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 animate-fade-up">
+                  {/* Horários de Início e Fim */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-[var(--text-2)]">Horário de Início</label>
+                        <input
+                          type="time"
+                          value={config.scheduleStartTime}
+                          onChange={(e) => updateField("scheduleStartTime", e.target.value)}
+                          className="field-input text-xs"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-[var(--text-2)]">Horário de Fim</label>
+                        <input
+                          type="time"
+                          value={config.scheduleEndTime}
+                          onChange={(e) => updateField("scheduleEndTime", e.target.value)}
+                          className="field-input text-xs"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)]">Fuso Horário (Timezone)</label>
+                      <select
+                        value={config.scheduleTimezone}
+                        onChange={(e) => updateField("scheduleTimezone", e.target.value)}
+                        className="field-input text-xs bg-[#090914] cursor-pointer"
+                      >
+                        <option value="America/Sao_Paulo">America/Sao_Paulo (Horário de Brasília)</option>
+                        <option value="America/Bahia">America/Bahia</option>
+                        <option value="America/Manaus">America/Manaus</option>
+                        <option value="America/New_York">America/New_York (EST)</option>
+                        <option value="Europe/Lisbon">Europe/Lisbon (WET)</option>
+                        <option value="Europe/London">Europe/London (GMT)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Dias da Semana */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">Dias de Atendimento</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { num: 1, name: "Segunda-feira" },
+                        { num: 2, name: "Terça-feira" },
+                        { num: 3, name: "Quarta-feira" },
+                        { num: 4, name: "Quinta-feira" },
+                        { num: 5, name: "Sexta-feira" },
+                        { num: 6, name: "Sábado" },
+                        { num: 0, name: "Domingo" },
+                      ].map((day) => {
+                        let daysList: number[] = [];
+                        try {
+                          daysList = JSON.parse(config.scheduleDays || "[1,2,3,4,5]");
+                        } catch (e) {
+                          daysList = [1, 2, 3, 4, 5];
+                        }
+                        const isChecked = daysList.includes(day.num);
+                        return (
+                          <button
+                            key={day.num}
+                            type="button"
+                            onClick={() => {
+                              let newList = [...daysList];
+                              if (newList.includes(day.num)) {
+                                newList = newList.filter((d) => d !== day.num);
+                              } else {
+                                newList.push(day.num);
+                                newList.sort();
+                              }
+                              updateField("scheduleDays", JSON.stringify(newList));
+                            }}
+                            className={`p-2 rounded-lg border text-left text-xs transition-all flex items-center justify-between cursor-pointer ${
+                              isChecked
+                                ? "bg-[rgba(245,158,11,0.06)] border-[rgba(245,158,11,0.3)] text-[var(--text-1)] font-semibold"
+                                : "bg-[#090914] border-[var(--border)] text-[var(--text-3)]"
+                            }`}
+                          >
+                            <span>{day.name}</span>
+                            {isChecked ? (
+                              <i className="fa-solid fa-circle-check text-amber-500 text-xs"></i>
+                            ) : (
+                              <i className="fa-regular fa-circle text-[10px] text-[var(--text-3)]"></i>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mensagem de Ausência */}
+            {config.scheduleEnabled && (
+              <div className="card space-y-4 animate-fade-up">
+                <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                  <i className="fa-solid fa-message text-amber-400 text-xs"></i>
+                  Mensagem de Ausência (Fora do Horário)
+                </h3>
+                <p className="text-xs text-[var(--text-2)]">
+                  Esta mensagem é disparada na primeira interação do cliente que ocorrer fora das regras de expediente configuradas.
+                </p>
+                <textarea
+                  value={config.scheduleOffMessage}
+                  onChange={(e) => updateField("scheduleOffMessage", e.target.value)}
+                  className="field-input min-h-[120px] font-mono text-xs leading-relaxed"
+                  placeholder="Olá! No momento estamos fora do horário de expediente..."
+                  required
+                />
+              </div>
+            )}
           </div>
         )}
 

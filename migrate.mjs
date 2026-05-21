@@ -111,6 +111,30 @@ try {
       console.log("[Migrate] Adicionando coluna 'ttsVoice' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "ttsVoice" TEXT NOT NULL DEFAULT "Kore"').run();
     }
+    if (!columns.includes("scheduleEnabled")) {
+      console.log("[Migrate] Adicionando coluna 'scheduleEnabled' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleEnabled" BOOLEAN NOT NULL DEFAULT false').run();
+    }
+    if (!columns.includes("scheduleTimezone")) {
+      console.log("[Migrate] Adicionando coluna 'scheduleTimezone' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleTimezone" TEXT NOT NULL DEFAULT "America/Sao_Paulo"').run();
+    }
+    if (!columns.includes("scheduleDays")) {
+      console.log("[Migrate] Adicionando coluna 'scheduleDays' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleDays" TEXT NOT NULL DEFAULT "[1,2,3,4,5]"').run();
+    }
+    if (!columns.includes("scheduleStartTime")) {
+      console.log("[Migrate] Adicionando coluna 'scheduleStartTime' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleStartTime" TEXT NOT NULL DEFAULT "08:00"').run();
+    }
+    if (!columns.includes("scheduleEndTime")) {
+      console.log("[Migrate] Adicionando coluna 'scheduleEndTime' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleEndTime" TEXT NOT NULL DEFAULT "18:00"').run();
+    }
+    if (!columns.includes("scheduleOffMessage")) {
+      console.log("[Migrate] Adicionando coluna 'scheduleOffMessage' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "scheduleOffMessage" TEXT NOT NULL DEFAULT "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"').run();
+    }
 
     // Message table new columns
     const msgInfo = db.prepare("PRAGMA table_info('Message')").all();

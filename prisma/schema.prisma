@@ -27,6 +27,12 @@ model AgentConfig {
   geminiModel         String   @default("gemini-2.5-flash-lite")
   audioResponseMode   String   @default("on_audio")
   ttsVoice            String   @default("Kore")
+  scheduleEnabled     Boolean  @default(false)
+  scheduleTimezone    String   @default("America/Sao_Paulo")
+  scheduleDays        String   @default("[1,2,3,4,5]")
+  scheduleStartTime   String   @default("08:00")
+  scheduleEndTime     String   @default("18:00")
+  scheduleOffMessage  String   @default("Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

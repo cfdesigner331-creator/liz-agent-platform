@@ -66,6 +66,12 @@ function sanitizeConfig(config: any) {
     geminiModel: config.geminiModel || "gemini-2.5-flash-lite",
     audioResponseMode: (config as any).audioResponseMode || "on_audio",
     ttsVoice: (config as any).ttsVoice || "Kore",
+    scheduleEnabled: (config as any).scheduleEnabled ?? false,
+    scheduleTimezone: (config as any).scheduleTimezone || "America/Sao_Paulo",
+    scheduleDays: (config as any).scheduleDays || "[1,2,3,4,5]",
+    scheduleStartTime: (config as any).scheduleStartTime || "08:00",
+    scheduleEndTime: (config as any).scheduleEndTime || "18:00",
+    scheduleOffMessage: (config as any).scheduleOffMessage || "Ol\u00e1! No momento estou fora do hor\u00e1rio de atendimento. Em breve retornarei! \ud83d\ude0a",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -92,6 +98,12 @@ export async function GET(req: Request) {
           geminiModel: "gemini-2.5-flash-lite",
           audioResponseMode: "on_audio",
           ttsVoice: "Kore",
+          scheduleEnabled: false,
+          scheduleTimezone: "America/Sao_Paulo",
+          scheduleDays: "[1,2,3,4,5]",
+          scheduleStartTime: "08:00",
+          scheduleEndTime: "18:00",
+          scheduleOffMessage: "Ol\u00e1! No momento estou fora do hor\u00e1rio de atendimento. Em breve retornarei! \ud83d\ude0a",
         },
       });
     }
@@ -132,6 +144,12 @@ export async function PUT(req: Request) {
       geminiModel: configData.geminiModel || "gemini-2.5-flash-lite",
       audioResponseMode: configData.audioResponseMode || "on_audio",
       ttsVoice: configData.ttsVoice || "Kore",
+      scheduleEnabled: Boolean(configData.scheduleEnabled ?? false),
+      scheduleTimezone: configData.scheduleTimezone || "America/Sao_Paulo",
+      scheduleDays: configData.scheduleDays || "[1,2,3,4,5]",
+      scheduleStartTime: configData.scheduleStartTime || "08:00",
+      scheduleEndTime: configData.scheduleEndTime || "18:00",
+      scheduleOffMessage: configData.scheduleOffMessage || "Ol\u00e1! No momento estou fora do hor\u00e1rio de atendimento. Em breve retornarei! \ud83d\ude0a",
     };
 
     let config = await prisma.agentConfig.findFirst();

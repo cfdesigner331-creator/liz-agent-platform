@@ -59,6 +59,76 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: "agente_desativado" });
     }
 
+    // 6.1. Verificar Horário de Atendimento (Schedule)
+    if ((config as any).scheduleEnabled) {
+      const timezone = (config as any).scheduleTimezone || "America/Sao_Paulo";
+      
+      // Obter data/hora atual no timezone configurado
+      let nowInTz: Date;
+      try {
+        const options = { timeZone: timezone, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false } as const;
+        const formatter = new Intl.DateTimeFormat("en-US", options);
+        const parts = formatter.formatToParts(new Date());
+        
+        const getVal = (type: string) => parts.find(p => p.type === type)!.value;
+        const year = getVal("year");
+        const month = getVal("month");
+        const day = getVal("day");
+        const hour = getVal("hour");
+        const minute = getVal("minute");
+        const second = getVal("second");
+        
+        nowInTz = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+      } catch (err) {
+        console.error("[Webhook] Erro ao computar timezone, usando local:", err);
+        nowInTz = new Date();
+      }
+
+      const currentDay = nowInTz.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+      const currentHours = nowInTz.getHours();
+      const currentMinutes = nowInTz.getMinutes();
+      const currentTimeMinutes = currentHours * 60 + currentMinutes;
+
+      // Parse dos dias da semana permitidos (ex: "[1,2,3,4,5]")
+      let allowedDays: number[] = [1, 2, 3, 4, 5];
+      try {
+        allowedDays = JSON.parse((config as any).scheduleDays || "[1,2,3,4,5]");
+      } catch (e) {
+        console.error("[Webhook] Erro ao parsear scheduleDays:", e);
+      }
+
+      // Parse do horário de início (ex: "08:00")
+      let startMinutes = 8 * 60; // 08:00
+      const startParts = ((config as any).scheduleStartTime || "08:00").split(":");
+      if (startParts.length === 2) {
+        startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+      }
+
+      // Parse do horário de fim (ex: "18:00")
+      let endMinutes = 18 * 60; // 18:00
+      const endParts = ((config as any).scheduleEndTime || "18:00").split(":");
+      if (endParts.length === 2) {
+        endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+      }
+
+      const isDayAllowed = allowedDays.includes(currentDay);
+      const isTimeAllowed = currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
+
+      if (!isDayAllowed || !isTimeAllowed) {
+        console.log(`[Webhook] Fora do expediente. Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}. Enviando mensagem de ausência.`);
+        if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
+          await sendWhatsAppMessage(
+            config.evolutionUrl,
+            config.evolutionApiKey,
+            config.instanceId,
+            remoteJid,
+            (config as any).scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"
+          );
+        }
+        return NextResponse.json({ ok: true, ignored: "fora_de_horario" });
+      }
+    }
+
     // 7. Verificar allowedPhones
     if (config.allowedPhones && config.allowedPhones.trim() !== "") {
       const allowedList = config.allowedPhones
@@ -249,13 +319,43 @@ export async function POST(req: Request) {
 
       // Fallback: enviar texto se áudio não foi enviado
       if (!audioSent) {
-        await sendWhatsAppMessage(
-          config.evolutionUrl,
-          config.evolutionApiKey,
-          config.instanceId,
-          remoteJid,
-          aiResult.content
-        );
+        // Auxiliar: Quebra de texto inteligente por parágrafos para simular digitação e evitar mensagens gigantes
+        const splitResponseIntoParagraphs = (text: string): string[] => {
+          if (!text) return [];
+          const paragraphs = text
+            .split(/\n\n+/)
+            .map(p => p.trim())
+            .filter(Boolean);
+
+          if (paragraphs.length <= 1) {
+            const single = text.trim();
+            if (single.length > 500) {
+              return single
+                .split(/\n+/)
+                .map(p => p.trim())
+                .filter(Boolean);
+            }
+          }
+          return paragraphs;
+        };
+
+        const textChunks = splitResponseIntoParagraphs(aiResult.content);
+        console.log(`[Webhook] Enviando ${textChunks.length} mensagens parceladas.`);
+        
+        for (let i = 0; i < textChunks.length; i++) {
+          await sendWhatsAppMessage(
+            config.evolutionUrl,
+            config.evolutionApiKey,
+            config.instanceId,
+            remoteJid,
+            textChunks[i]
+          );
+          
+          if (i < textChunks.length - 1) {
+            const delayMs = Math.min(3000, Math.max(1000, textChunks[i].length * 15));
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+        }
       }
     } else {
       console.warn("[Webhook] Evolution API não configurada. Resposta de IA não entregue.");

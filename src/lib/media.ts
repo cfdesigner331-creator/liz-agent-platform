@@ -91,6 +91,14 @@ export async function downloadMediaFromEvolution(
   }
 }
 
+// ─── Helper: sanitizar mimetype para Gemini ──────────────────────────────────
+// WhatsApp envia "audio/ogg; codecs=opus" mas Gemini só aceita "audio/ogg"
+function sanitizeMimetype(raw: string): string {
+  if (!raw) return "audio/ogg";
+  // Remove tudo depois do ";" (ex: "; codecs=opus")
+  return raw.split(";")[0].trim().toLowerCase();
+}
+
 // ─── Transcrição de Áudio com Gemini ─────────────────────────────────────────
 export async function transcribeAudioWithGemini(
   base64: string,
@@ -99,6 +107,9 @@ export async function transcribeAudioWithGemini(
   geminiModel: string
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+  const cleanMime = sanitizeMimetype(mimetype);
+
+  console.log(`[Media] Transcrevendo áudio | mime: ${cleanMime} | tamanho base64: ${base64.length} chars`);
 
   try {
     const response = await ai.models.generateContent({
@@ -110,17 +121,25 @@ export async function transcribeAudioWithGemini(
               text: "Transcreva exatamente o que está sendo dito neste áudio em português brasileiro. Retorne apenas a transcrição literal, sem comentários ou explicações adicionais.",
             },
             {
-              inlineData: { mimeType: mimetype, data: base64 },
+              inlineData: { mimeType: cleanMime, data: base64 },
             },
           ],
         },
       ],
     });
 
-    return response.text?.trim() || "[Áudio não pôde ser transcrito]";
+    const transcription = response.text?.trim();
+    if (!transcription) {
+      console.warn("[Media] Gemini retornou transcrição vazia.");
+      return "[Áudio recebido - não foi possível transcrever]";
+    }
+
+    console.log(`[Media] Transcrição OK: "${transcription.substring(0, 80)}..."`);
+    return transcription;
   } catch (err: any) {
     console.error("[Media] Erro ao transcrever áudio com Gemini:", err.message);
-    return "[Erro ao transcrever áudio]";
+    // Retorna erro legível mas não quebra o fluxo
+    return `[Áudio recebido - erro na transcrição: ${err.message?.substring(0, 60)}]`;
   }
 }
 
@@ -133,6 +152,7 @@ export async function analyzeImageWithGemini(
   geminiModel: string
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+  const cleanMime = sanitizeMimetype(mimetype) || "image/jpeg";
 
   const textPrompt = caption
     ? `Descreva esta imagem detalhadamente para um contexto comercial. O cliente também enviou esta legenda: "${caption}". Inclua todos os elementos visuais relevantes.`
@@ -145,7 +165,7 @@ export async function analyzeImageWithGemini(
         {
           parts: [
             { text: textPrompt },
-            { inlineData: { mimeType: mimetype, data: base64 } },
+            { inlineData: { mimeType: cleanMime, data: base64 } },
           ],
         },
       ],
@@ -167,6 +187,7 @@ export async function analyzeDocumentWithGemini(
   geminiModel: string
 ): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+  const cleanMime = sanitizeMimetype(mimetype) || "application/pdf";
 
   try {
     const response = await ai.models.generateContent({
@@ -177,7 +198,7 @@ export async function analyzeDocumentWithGemini(
             {
               text: `Analise este documento chamado "${title || "documento"}" e extraia as informações mais importantes em português. Informe o tipo de documento, dados principais e qualquer informação relevante para um atendimento comercial.`,
             },
-            { inlineData: { mimeType: mimetype, data: base64 } },
+            { inlineData: { mimeType: cleanMime, data: base64 } },
           ],
         },
       ],
@@ -198,10 +219,15 @@ export async function generateSpeechWithGemini(
 ): Promise<string | null> {
   const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
+  // Limita o texto a 4000 chars (limite do TTS)
+  const safeText = text.substring(0, 4000);
+
+  console.log(`[Media] Gerando TTS | voz: ${ttsVoice} | texto: "${safeText.substring(0, 60)}..."`);
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text }] }],
+      contents: [{ parts: [{ text: safeText }] }],
       config: {
         responseModalities: ["AUDIO"],
         speechConfig: {
@@ -212,15 +238,28 @@ export async function generateSpeechWithGemini(
       },
     });
 
-    const part = response.candidates?.[0]?.content?.parts?.[0];
-    const pcmBase64 = (part as any)?.inlineData?.data as string | undefined;
+    // Tenta extrair o áudio de candidates[0].content.parts[0].inlineData
+    const candidate = (response as any)?.candidates?.[0];
+    const part = candidate?.content?.parts?.[0];
+    const inlineData = part?.inlineData;
 
-    if (!pcmBase64) {
-      console.warn("[Media] TTS Gemini não retornou dados de áudio.");
+    if (!inlineData?.data) {
+      console.warn("[Media] TTS Gemini não retornou inlineData. Estrutura da resposta:", JSON.stringify({
+        hasCandidates: !!(response as any)?.candidates,
+        candidateCount: (response as any)?.candidates?.length,
+        hasContent: !!candidate?.content,
+        hasParts: !!candidate?.content?.parts,
+        partType: part ? Object.keys(part) : null,
+      }));
       return null;
     }
 
-    // PCM 24kHz mono 16-bit → WAV
+    const mimeType = inlineData.mimeType || "audio/pcm";
+    const pcmBase64 = inlineData.data as string;
+
+    console.log(`[Media] TTS OK | mime: ${mimeType} | tamanho: ${pcmBase64.length} chars`);
+
+    // Gemini TTS retorna PCM linear 24kHz mono 16-bit → encapsula em WAV
     const pcmBuffer = Buffer.from(pcmBase64, "base64");
     const wavBuffer = pcmToWav(pcmBuffer, 24000, 1, 16);
     return wavBuffer.toString("base64");
@@ -229,6 +268,7 @@ export async function generateSpeechWithGemini(
     return null;
   }
 }
+
 
 // ─── Detectar tipo de mídia no payload da Evolution API ──────────────────────
 export function detectMediaType(messageContent: Record<string, any>): {

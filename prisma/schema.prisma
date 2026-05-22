@@ -47,6 +47,7 @@ model AgentConfig {
   textTitle           String   @default("Liz | Assistente Virtual")
   transcriptionProvider String @default("groq")
   visionProvider        String @default("groq")
+  observationMode       Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

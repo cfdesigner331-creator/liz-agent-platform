@@ -43,6 +43,7 @@ interface AgentConfig {
   visionProvider?: string;
   groqTranscriptionModel?: string;
   groqVisionModel?: string;
+  observationMode?: boolean;
 }
 
 export default function ConfigPage() {
@@ -86,6 +87,7 @@ export default function ConfigPage() {
     visionProvider: "groq",
     groqTranscriptionModel: "whisper-large-v3-turbo",
     groqVisionModel: "llama-3.2-11b-vision-preview",
+    observationMode: false,
   });
 
   const [loading, setLoading] = useState(true);
@@ -197,18 +199,35 @@ export default function ConfigPage() {
           </p>
         </div>
 
-        {/* Global Agent Toggle Badge */}
-        <button
-          onClick={() => updateField("enabled", !config.enabled)}
-          className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
-            config.enabled
-              ? "bg-[rgba(74,222,128,0.06)] border-[rgba(74,222,128,0.2)] text-[var(--success)]"
-              : "bg-[rgba(248,113,113,0.06)] border-[rgba(248,113,113,0.2)] text-[var(--error)]"
-          }`}
-        >
-          <span className={`w-2 h-2 rounded-full ${config.enabled ? "bg-[var(--success)] animate-pulse" : "bg-[var(--error)]"}`} />
-          <span>AUTOMAÇÃO: {config.enabled ? "ATIVADA" : "DESATIVADA"}</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* MODO TREINAMENTO Toggle */}
+          <button
+            type="button"
+            onClick={() => updateField("observationMode", !config.observationMode)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
+              config.observationMode
+                ? "bg-[rgba(168,85,247,0.06)] border-[rgba(168,85,247,0.25)] text-purple-400"
+                : "bg-[rgba(255,255,255,0.02)] border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-2)]"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${config.observationMode ? "bg-purple-400 animate-pulse" : "bg-transparent border border-[var(--text-3)]"}`} />
+            <span>MODO TREINAMENTO: {config.observationMode ? "ATIVADO" : "DESATIVADO"}</span>
+          </button>
+
+          {/* Global Agent Toggle Badge */}
+          <button
+            type="button"
+            onClick={() => updateField("enabled", !config.enabled)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
+              config.enabled
+                ? "bg-[rgba(74,222,128,0.06)] border-[rgba(74,222,128,0.2)] text-[var(--success)]"
+                : "bg-[rgba(248,113,113,0.06)] border-[rgba(248,113,113,0.2)] text-[var(--error)]"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${config.enabled ? "bg-[var(--success)] animate-pulse" : "bg-[var(--error)]"}`} />
+            <span>AUTOMAÇÃO: {config.enabled ? "ATIVADA" : "DESATIVADA"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Webhook Quickbox Widget */}
@@ -578,27 +597,95 @@ export default function ConfigPage() {
 
         {/* TAB 2: INSTRUCTIONS & PERSONA */}
         {activeTab === "instructions" && (
-          <div className="card space-y-6 animate-fade-up">
-            <div className="border-b border-[var(--border)] pb-3 flex justify-between items-center">
-              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)]">
-                Instruções de Sistema (Prompt Base)
-              </h3>
-              <span className="text-[10px] text-[var(--text-3)] uppercase font-[var(--font-mono)]">
-                {config.systemPrompt.length} caracteres
-              </span>
+          <div className="space-y-6 animate-fade-up">
+            <div className="card space-y-6">
+              <div className="border-b border-[var(--border)] pb-3 flex justify-between items-center">
+                <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)]">
+                  Instruções de Sistema (Prompt Base)
+                </h3>
+                <span className="text-[10px] text-[var(--text-3)] uppercase font-[var(--font-mono)]">
+                  {config.systemPrompt.length} caracteres
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                  Este é o "cérebro" do agente. Defina a personalidade da Liz, os produtos que ela vende, as regras de quantidades e formas de pagamento, e o modelo estruturado para fechar vendas.
+                </p>
+                <textarea
+                  value={config.systemPrompt}
+                  onChange={(e) => updateField("systemPrompt", e.target.value)}
+                  className="field-input min-h-[420px] font-mono text-xs leading-relaxed"
+                  placeholder="Insira as diretrizes do robô..."
+                  required
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-xs text-[var(--text-2)] leading-relaxed">
-                Este é o "cérebro" do agente. Defina a personalidade da Liz, os produtos que ela vende, as regras de quantidades e formas de pagamento, e o modelo estruturado para fechar vendas.
-              </p>
-              <textarea
-                value={config.systemPrompt}
-                onChange={(e) => updateField("systemPrompt", e.target.value)}
-                className="field-input min-h-[420px] font-mono text-xs leading-relaxed"
-                placeholder="Insira as diretrizes do robô..."
-                required
-              />
+            {/* Modo Treinamento / Aprendizado Operacional */}
+            <div className="card space-y-6">
+              <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
+                <div>
+                  <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] flex items-center gap-2">
+                    <i className="fa-solid fa-graduation-cap text-purple-400 text-xs"></i>
+                    Modo Treinamento / Aprendizado
+                  </h3>
+                  <p className="text-xs text-[var(--text-3)] mt-0.5">
+                    Permite que o agente funcione apenas observando e registrando conversas sem responder ativamente.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateField("observationMode", !config.observationMode)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
+                    config.observationMode ? "bg-purple-500" : "bg-[#1C1C38]"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      config.observationMode ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="text-xs text-[var(--text-2)] leading-relaxed space-y-4">
+                <p>
+                  Quando o <strong className="text-purple-400">Modo Treinamento (Observação)</strong> está ativado, a Liz entra em estado de aprendizado operacional permanente:
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[#090914] flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-red-400 font-bold text-xs">
+                      <i className="fa-solid fa-comment-slash"></i>
+                      <span>Respostas Desativadas</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                      A Liz não enviará nenhuma mensagem automática no WhatsApp, mantendo o fluxo inteiramente livre para sua equipe.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[#090914] flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-green-400 font-bold text-xs">
+                      <i className="fa-solid fa-database"></i>
+                      <span>Captura de Dados 100%</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                      Mensagens de clientes (incluindo transcrição de áudios e descrições de imagens) são processadas e guardadas silenciosamente.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-[var(--border)] bg-[#090914] flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-purple-400 font-bold text-xs">
+                      <i className="fa-solid fa-brain"></i>
+                      <span>Aprendizado Contínuo</span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                      Todas as interações dos atendentes humanos e dos clientes alimentam o contexto de plantão para futuras interações de IA.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

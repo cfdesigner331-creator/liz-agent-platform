@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  liz-agent:
+    build: .
+    container_name: liz-agent
+    ports:
+      - "3000:3000"
+    volumes:
+      # OPÇÃO 1: Volume Nomeado (Padrão, super seguro gerenciado pelo Docker)
+      - liz-db-volume:/app/data
+      
+      # OPÇÃO 2: Bind Mount (Recomendado se quiser ver o arquivo prod.db diretamente na pasta do servidor)
+      # Descomente a linha abaixo e comente a OPÇÃO 1 se preferir persistir direto na pasta "./data" do host:
+      # - ./data:/app/data
+    environment:
+      - DATABASE_URL=file:/app/data/prod.db
+      - PORT=3000
+    restart: always
+
+volumes:
+  liz-db-volume:
+    driver: local
+

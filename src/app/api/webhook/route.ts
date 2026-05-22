@@ -266,6 +266,12 @@ export async function POST(req: Request) {
       },
     });
 
+    // 11.0. Verificar se o Modo Treinamento (Modo Observação) está ativo
+    if ((config as any).observationMode === true) {
+      console.log(`[Webhook] Agente em Modo Observação (Modo Treinamento). Mensagem de +${phone} salva silenciosamente no banco.`);
+      return NextResponse.json({ ok: true, ignored: "modo_observacao_ativo" });
+    }
+
     // 11.1. Verificar se a conversa já está encerrada (triagem concluída)
     // Se existir alguma mensagem anterior da IA contendo o resumo da solicitação, ignoramos silenciosamente
     const summaryMessage = await prisma.message.findFirst({

@@ -78,6 +78,7 @@ try {
         "textTitle" TEXT NOT NULL DEFAULT 'Liz | Assistente Virtual',
         "transcriptionProvider" TEXT NOT NULL DEFAULT 'groq',
         "visionProvider" TEXT NOT NULL DEFAULT 'groq',
+        "observationMode" BOOLEAN NOT NULL DEFAULT false,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -210,6 +211,10 @@ try {
     if (!columns.includes("groqVisionModel")) {
       console.log("[Migrate] Adicionando coluna 'groqVisionModel' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "groqVisionModel" TEXT NOT NULL DEFAULT "llama-3.2-11b-vision-preview"').run();
+    }
+    if (!columns.includes("observationMode")) {
+      console.log("[Migrate] Adicionando coluna 'observationMode' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "observationMode" BOOLEAN NOT NULL DEFAULT false').run();
     }
 
     // Message table new columns

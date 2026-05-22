@@ -139,6 +139,7 @@ function sanitizeConfig(config: any) {
     textTitle: (config as any).textTitle || "Liz | Assistente Virtual",
     transcriptionProvider: (config as any).transcriptionProvider || "groq",
     visionProvider: (config as any).visionProvider || "groq",
+    observationMode: Boolean((config as any).observationMode ?? false),
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -204,6 +205,7 @@ export async function GET(req: Request) {
           textTitle: "Liz | Assistente Virtual",
           transcriptionProvider: "groq",
           visionProvider: "groq",
+          observationMode: false,
         },
       });
     }
@@ -264,6 +266,7 @@ export async function PUT(req: Request) {
       textTitle: configData.textTitle || "Liz | Assistente Virtual",
       transcriptionProvider: configData.transcriptionProvider || "groq",
       visionProvider: configData.visionProvider || "groq",
+      observationMode: Boolean(configData.observationMode ?? false),
     };
 
     let config = await prisma.agentConfig.findFirst();

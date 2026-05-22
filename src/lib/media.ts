@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import OpenAI, { toFile } from "openai";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type MediaType = "audio" | "image" | "document" | null;
@@ -432,4 +433,231 @@ export async function generateSpeech(
     }
     return generateSpeechWithGemini(text, apiKey, voice);
   }
+}
+
+// ─── Helper: obter extensão de áudio a partir do mimetype ────────────────────
+function getAudioExtension(mimetype: string): string {
+  const mime = mimetype.toLowerCase();
+  if (mime.includes("ogg")) return "ogg";
+  if (mime.includes("mp3")) return "mp3";
+  if (mime.includes("wav")) return "wav";
+  if (mime.includes("m4a")) return "m4a";
+  if (mime.includes("webm")) return "webm";
+  return "ogg";
+}
+
+// ─── Transcrição de Áudio com OpenAI Whisper ─────────────────────────────────
+export async function transcribeAudioWithOpenAI(
+  base64: string,
+  mimetype: string,
+  apiKey: string
+): Promise<string> {
+  const openai = new OpenAI({ apiKey: apiKey.trim() });
+  const cleanMime = sanitizeMimetype(mimetype);
+  const extension = getAudioExtension(cleanMime);
+
+  console.log(`[Media] Transcrevendo áudio | mime: ${cleanMime} | modelo: whisper-1 | tamanho base64: ${base64.length} chars`);
+
+  try {
+    const file = await toFile(Buffer.from(base64, "base64"), `audio.${extension}`, { type: cleanMime });
+    const response = await openai.audio.transcriptions.create({
+      file: file,
+      model: "whisper-1",
+      language: "pt",
+    });
+
+    const transcription = response.text?.trim();
+    if (!transcription) {
+      console.warn("[Media] OpenAI Whisper retornou transcrição vazia.");
+      return "[Áudio recebido - não foi possível transcrever]";
+    }
+
+    console.log(`[Media] Transcrição OpenAI Whisper OK: "${transcription.substring(0, 80)}..."`);
+    return transcription;
+  } catch (err: any) {
+    console.error("[Media] Erro ao transcrever áudio com OpenAI Whisper:", err.message);
+    throw err;
+  }
+}
+
+// ─── Análise de Imagem com OpenAI Vision (GPT-4o / GPT-4o-mini) ───────────────
+export async function analyzeImageWithOpenAI(
+  base64: string,
+  mimetype: string,
+  caption: string,
+  apiKey: string,
+  model = "gpt-4o-mini"
+): Promise<string> {
+  const openai = new OpenAI({ apiKey: apiKey.trim() });
+  const cleanMime = sanitizeMimetype(mimetype) || "image/jpeg";
+  const dataUrl = `data:${cleanMime};base64,${base64}`;
+
+  const textPrompt = caption
+    ? `Descreva esta imagem detalhadamente para um contexto comercial. O cliente também enviou esta legenda: "${caption}". Inclua todos os elementos visuais relevantes.`
+    : "Descreva esta imagem detalhadamente para um contexto comercial. Inclua todos os elementos visuais, cores, texto visível e qualquer detalhe relevante para uma conversa de vendas/atendimento.";
+
+  console.log(`[Media] Analisando imagem com OpenAI | mime: ${cleanMime} | modelo: ${model} | prompt: "${textPrompt.substring(0, 60)}..."`);
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: model,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: textPrompt },
+            {
+              type: "image_url",
+              image_url: { url: dataUrl },
+            },
+          ],
+        },
+      ],
+    });
+
+    const description = response.choices[0]?.message?.content?.trim();
+    return description || "[Imagem não pôde ser analisada]";
+  } catch (err: any) {
+    console.error("[Media] Erro ao analisar imagem com OpenAI:", err.message);
+    throw err;
+  }
+}
+
+// ─── Orquestrador Híbrido Resiliente: Transcrição ──────────────────────────
+export async function transcribeAudio(
+  base64: string,
+  mimetype: string,
+  config: {
+    transcriptionProvider?: string;
+    geminiApiKey?: string;
+    geminiModel?: string;
+    openaiApiKey?: string;
+  }
+): Promise<string> {
+  const provider = config.transcriptionProvider || "gemini";
+
+  if (provider === "openai") {
+    if (config.openaiApiKey) {
+      try {
+        return await transcribeAudioWithOpenAI(base64, mimetype, config.openaiApiKey);
+      } catch (err: any) {
+        console.warn("[Media] Falha na transcrição com OpenAI Whisper, tentando fallback para Gemini...", err.message);
+        if (config.geminiApiKey) {
+          return await transcribeAudioWithGemini(base64, mimetype, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+        }
+      }
+    }
+  } else {
+    if (config.geminiApiKey) {
+      try {
+        return await transcribeAudioWithGemini(base64, mimetype, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+      } catch (err: any) {
+        console.warn("[Media] Falha na transcrição com Gemini, tentando fallback para OpenAI Whisper...", err.message);
+        if (config.openaiApiKey) {
+          return await transcribeAudioWithOpenAI(base64, mimetype, config.openaiApiKey);
+        }
+      }
+    }
+  }
+
+  return "[Áudio recebido - sem provedor de transcrição disponível ou credenciais inválidas]";
+}
+
+// ─── Orquestrador Híbrido Resiliente: Análise de Imagem ─────────────────────
+export async function analyzeImage(
+  base64: string,
+  mimetype: string,
+  caption: string,
+  config: {
+    visionProvider?: string;
+    geminiApiKey?: string;
+    geminiModel?: string;
+    openaiApiKey?: string;
+    openaiModel?: string;
+  }
+): Promise<string> {
+  const provider = config.visionProvider || "gemini";
+
+  if (provider === "openai") {
+    if (config.openaiApiKey) {
+      try {
+        return await analyzeImageWithOpenAI(base64, mimetype, caption, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
+      } catch (err: any) {
+        console.warn("[Media] Falha na análise de imagem com OpenAI, tentando fallback para Gemini...", err.message);
+        if (config.geminiApiKey) {
+          return await analyzeImageWithGemini(base64, mimetype, caption, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+        }
+      }
+    }
+  } else {
+    if (config.geminiApiKey) {
+      try {
+        return await analyzeImageWithGemini(base64, mimetype, caption, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+      } catch (err: any) {
+        console.warn("[Media] Falha na análise de imagem com Gemini, tentando fallback para OpenAI...", err.message);
+        if (config.openaiApiKey) {
+          return await analyzeImageWithOpenAI(base64, mimetype, caption, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
+        }
+      }
+    }
+  }
+
+  return "[Imagem recebida - sem provedor de visão disponível ou credenciais inválidas]";
+}
+
+// ─── Orquestrador Híbrido Resiliente: Análise de Documento ──────────────────
+export async function analyzeDocument(
+  base64: string,
+  mimetype: string,
+  title: string,
+  config: {
+    visionProvider?: string;
+    geminiApiKey?: string;
+    geminiModel?: string;
+    openaiApiKey?: string;
+    openaiModel?: string;
+  }
+): Promise<string> {
+  const provider = config.visionProvider || "gemini";
+
+  if (provider === "openai") {
+    // Se for PDF, o Gemini é absurdamente melhor. Tenta Gemini primeiro se houver chave.
+    const isPdf = mimetype.toLowerCase().includes("pdf");
+    if (isPdf && config.geminiApiKey) {
+      try {
+        return await analyzeDocumentWithGemini(base64, mimetype, title, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+      } catch (err: any) {
+        console.warn("[Media] Falha ao ler PDF com Gemini, tentando fallback de imagem se aplicável...", err.message);
+      }
+    }
+
+    if (config.openaiApiKey) {
+      try {
+        const isImage = mimetype.toLowerCase().includes("image") || mimetype.toLowerCase().includes("png") || mimetype.toLowerCase().includes("jpeg");
+        if (isImage) {
+          return await analyzeImageWithOpenAI(base64, mimetype, `Documento: ${title}`, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
+        }
+        return `[Documento recebido: ${title} - leitura direta pelo OpenAI indisponível sem Gemini]`;
+      } catch (err: any) {
+        console.warn("[Media] Falha na análise com OpenAI...", err.message);
+      }
+    }
+  } else {
+    // Gemini first
+    if (config.geminiApiKey) {
+      try {
+        return await analyzeDocumentWithGemini(base64, mimetype, title, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+      } catch (err: any) {
+        console.warn("[Media] Falha na análise do Gemini, tentando fallback para OpenAI...", err.message);
+        if (config.openaiApiKey) {
+          const isImage = mimetype.toLowerCase().includes("image") || mimetype.toLowerCase().includes("png") || mimetype.toLowerCase().includes("jpeg");
+          if (isImage) {
+            return await analyzeImageWithOpenAI(base64, mimetype, `Documento: ${title}`, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
+          }
+        }
+      }
+    }
+  }
+
+  return "[Documento recebido - sem provedor de análise de documento disponível ou credenciais inválidas]";
 }

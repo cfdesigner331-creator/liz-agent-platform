@@ -10,9 +10,9 @@ import {
 import {
   detectMediaType,
   downloadMediaFromEvolution,
-  transcribeAudioWithGemini,
-  analyzeImageWithGemini,
-  analyzeDocumentWithGemini,
+  transcribeAudio,
+  analyzeImage,
+  analyzeDocument,
   generateSpeech,
 } from "@/lib/media";
 
@@ -232,7 +232,7 @@ export async function POST(req: Request) {
     let detectedMediaType = mediaInfo.type;
     let isAudioMessage = false;
 
-    if (mediaInfo.type && config.geminiApiKey) {
+    if (mediaInfo.type && (config.geminiApiKey || config.openaiApiKey)) {
       console.log(`[Webhook] Mídia detectada: ${mediaInfo.type} (${mediaInfo.mimetype})`);
 
       const mediaData = await downloadMediaFromEvolution(
@@ -245,28 +245,25 @@ export async function POST(req: Request) {
       if (mediaData) {
         if (mediaInfo.type === "audio") {
           isAudioMessage = true;
-          mediaCaption = await transcribeAudioWithGemini(
+          mediaCaption = await transcribeAudio(
             mediaData.base64,
             mediaData.mimetype,
-            config.geminiApiKey,
-            config.geminiModel
+            config
           );
           console.log(`[Webhook] Transcrição: ${mediaCaption.substring(0, 80)}...`);
         } else if (mediaInfo.type === "image") {
-          mediaCaption = await analyzeImageWithGemini(
+          mediaCaption = await analyzeImage(
             mediaData.base64,
             mediaData.mimetype,
             mediaInfo.caption,
-            config.geminiApiKey,
-            config.geminiModel
+            config
           );
         } else if (mediaInfo.type === "document") {
-          mediaCaption = await analyzeDocumentWithGemini(
+          mediaCaption = await analyzeDocument(
             mediaData.base64,
             mediaData.mimetype,
             mediaInfo.title,
-            config.geminiApiKey,
-            config.geminiModel
+            config
           );
         }
       }

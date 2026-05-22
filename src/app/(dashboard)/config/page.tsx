@@ -39,6 +39,8 @@ interface AgentConfig {
   schedulePlantaoEnd2?: string;
   textTitleEnabled?: boolean;
   textTitle?: string;
+  transcriptionProvider?: string;
+  visionProvider?: string;
 }
 
 export default function ConfigPage() {
@@ -78,6 +80,8 @@ export default function ConfigPage() {
     schedulePlantaoEnd2: "17:30",
     textTitleEnabled: false,
     textTitle: "Liz | Assistente Virtual",
+    transcriptionProvider: "gemini",
+    visionProvider: "gemini",
   });
 
   const [loading, setLoading] = useState(true);
@@ -1019,11 +1023,104 @@ export default function ConfigPage() {
               </div>
             )}
 
+            {/* Provedores de Transcrição e Visão */}
+            <div className="card space-y-6 animate-fade-up">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-brain text-purple-400 text-xs"></i>
+                Provedores de Transcrição &amp; Visão (Mídia)
+              </h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Configure os motores de inteligência que a Liz usará para transcrever notas de voz de áudio e descrever imagens ou PDFs enviados pelos clientes.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Provedor de Transcrição */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-[var(--text-2)] flex items-center gap-1.5">
+                    <i className="fa-solid fa-microphone text-purple-400"></i> Provedor de Transcrição (Áudio)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        value: "gemini",
+                        label: "Google Gemini",
+                        desc: "Grátis, Flash",
+                      },
+                      {
+                        value: "openai",
+                        label: "OpenAI Whisper",
+                        desc: "Alta fidelidade",
+                      },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => updateField("transcriptionProvider", opt.value)}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1 relative ${
+                          (config.transcriptionProvider || "gemini") === opt.value
+                            ? "bg-[rgba(168,85,247,0.08)] border-[rgba(168,85,247,0.4)] text-[var(--text-1)] shadow-[0_0_12px_rgba(168,85,247,0.05)]"
+                            : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)] text-[var(--text-2)]"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-bold text-xs">{opt.label}</span>
+                          {(config.transcriptionProvider || "gemini") === opt.value && (
+                            <i className="fa-solid fa-circle-check text-purple-400 text-xs"></i>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-[var(--text-3)]">{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Provedor de Visão */}
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-[var(--text-2)] flex items-center gap-1.5">
+                    <i className="fa-solid fa-image text-purple-400"></i> Provedor de Visão (Imagens/PDF)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        value: "gemini",
+                        label: "Google Gemini",
+                        desc: "Multimodal veloz",
+                      },
+                      {
+                        value: "openai",
+                        label: "OpenAI Vision",
+                        desc: "GPT-4o-mini preciso",
+                      },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => updateField("visionProvider", opt.value)}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1 relative ${
+                          (config.visionProvider || "gemini") === opt.value
+                            ? "bg-[rgba(168,85,247,0.08)] border-[rgba(168,85,247,0.4)] text-[var(--text-1)] shadow-[0_0_12px_rgba(168,85,247,0.05)]"
+                            : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)] text-[var(--text-2)]"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-bold text-xs">{opt.label}</span>
+                          {(config.visionProvider || "gemini") === opt.value && (
+                            <i className="fa-solid fa-circle-check text-purple-400 text-xs"></i>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-[var(--text-3)]">{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Media Processing Info */}
             <div className="card border-[rgba(168,85,247,0.1)] bg-[rgba(13,13,28,0.4)] space-y-4">
               <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
                 <i className="fa-solid fa-sparkles text-purple-400 text-xs"></i>
-                Processamento de Mídia — Gemini Multimodal
+                Processamento de Mídia Híbrido
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
@@ -1043,7 +1140,7 @@ export default function ConfigPage() {
               </div>
               <p className="text-[10px] text-[var(--text-3)] border-t border-[var(--border)] pt-3">
                 <i className="fa-solid fa-circle-info mr-1 text-purple-400"></i>
-                O processamento de mídia requer a <strong className="text-[var(--text-2)]">Gemini API Key</strong> configurada na aba Provedores de IA.
+                O processamento de mídia requer a <strong className="text-[var(--text-2)]">Gemini API Key</strong> ou a <strong className="text-[var(--text-2)]">OpenAI API Key</strong> devidamente configuradas na aba Provedores de IA.
               </p>
             </div>
           </div>

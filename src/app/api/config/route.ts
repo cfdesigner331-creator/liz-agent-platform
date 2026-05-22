@@ -82,6 +82,8 @@ function sanitizeConfig(config: any) {
     schedulePlantaoEnd2: (config as any).schedulePlantaoEnd2 || "17:30",
     textTitleEnabled: (config as any).textTitleEnabled ?? false,
     textTitle: (config as any).textTitle || "Liz | Assistente Virtual",
+    transcriptionProvider: (config as any).transcriptionProvider || "gemini",
+    visionProvider: (config as any).visionProvider || "gemini",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -132,6 +134,8 @@ export async function GET(req: Request) {
           schedulePlantaoEnd2: "17:30",
           textTitleEnabled: false,
           textTitle: "Liz | Assistente Virtual",
+          transcriptionProvider: "gemini",
+          visionProvider: "gemini",
         },
       });
     }
@@ -188,6 +192,8 @@ export async function PUT(req: Request) {
       schedulePlantaoEnd2: configData.schedulePlantaoEnd2 || "17:30",
       textTitleEnabled: Boolean(configData.textTitleEnabled ?? false),
       textTitle: configData.textTitle || "Liz | Assistente Virtual",
+      transcriptionProvider: configData.transcriptionProvider || "gemini",
+      visionProvider: configData.visionProvider || "gemini",
     };
 
     let config = await prisma.agentConfig.findFirst();

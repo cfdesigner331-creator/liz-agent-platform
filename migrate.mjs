@@ -74,6 +74,8 @@ try {
         "schedulePlantaoEnd2" TEXT NOT NULL DEFAULT '17:30',
         "textTitleEnabled" BOOLEAN NOT NULL DEFAULT false,
         "textTitle" TEXT NOT NULL DEFAULT 'Liz | Assistente Virtual',
+        "transcriptionProvider" TEXT NOT NULL DEFAULT 'gemini',
+        "visionProvider" TEXT NOT NULL DEFAULT 'gemini',
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -190,6 +192,14 @@ try {
     if (!columns.includes("textTitle")) {
       console.log("[Migrate] Adicionando coluna 'textTitle' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "textTitle" TEXT NOT NULL DEFAULT "Liz | Assistente Virtual"').run();
+    }
+    if (!columns.includes("transcriptionProvider")) {
+      console.log("[Migrate] Adicionando coluna 'transcriptionProvider' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "transcriptionProvider" TEXT NOT NULL DEFAULT "gemini"').run();
+    }
+    if (!columns.includes("visionProvider")) {
+      console.log("[Migrate] Adicionando coluna 'visionProvider' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "visionProvider" TEXT NOT NULL DEFAULT "gemini"').run();
     }
 
     // Message table new columns

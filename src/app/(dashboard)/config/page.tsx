@@ -1039,8 +1039,13 @@ export default function ConfigPage() {
                   <label className="text-xs font-bold text-[var(--text-2)] flex items-center gap-1.5">
                     <i className="fa-solid fa-microphone text-purple-400"></i> Provedor de Transcrição (Áudio)
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
+                      {
+                        value: "groq",
+                        label: "Groq Whisper",
+                        desc: "Grátis, Ultra Veloz",
+                      },
                       {
                         value: "gemini",
                         label: "Google Gemini",
@@ -1079,8 +1084,13 @@ export default function ConfigPage() {
                   <label className="text-xs font-bold text-[var(--text-2)] flex items-center gap-1.5">
                     <i className="fa-solid fa-image text-purple-400"></i> Provedor de Visão (Imagens/PDF)
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {[
+                      {
+                        value: "groq",
+                        label: "Groq Vision",
+                        desc: "Llama 3.2 Vision",
+                      },
                       {
                         value: "gemini",
                         label: "Google Gemini",
@@ -1117,13 +1127,37 @@ export default function ConfigPage() {
 
               {/* DYNAMIC API KEYS FOR MEDIA */}
               {(((config.transcriptionProvider || "gemini") === "openai" || (config.visionProvider || "gemini") === "openai") ||
-                ((config.transcriptionProvider || "gemini") === "gemini" || (config.visionProvider || "gemini") === "gemini")) && (
+                ((config.transcriptionProvider || "gemini") === "gemini" || (config.visionProvider || "gemini") === "gemini") ||
+                ((config.transcriptionProvider || "gemini") === "groq" || (config.visionProvider || "gemini") === "groq")) && (
                 <div className="border-t border-[var(--border)] pt-5 mt-4 space-y-4">
                   <h4 className="text-xs font-bold text-[var(--text-1)] flex items-center gap-1.5">
                     <i className="fa-solid fa-key text-purple-400"></i>
                     Configuração de Chaves de API para Mídia
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Groq API Key */}
+                    {((config.transcriptionProvider || "gemini") === "groq" || (config.visionProvider || "gemini") === "groq") && (
+                      <div className="space-y-2 animate-fade-up">
+                        <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                          <span>Groq API Key (Whisper / Vision)</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowGroqKey(!showGroqKey)}
+                            className="text-[10px] text-[var(--accent-text)] hover:underline"
+                          >
+                            {showGroqKey ? "Ocultar" : "Mostrar"}
+                          </button>
+                        </label>
+                        <input
+                          type={showGroqKey ? "text" : "password"}
+                          value={config.groqApiKey || ""}
+                          onChange={(e) => updateField("groqApiKey", e.target.value)}
+                          className="field-input text-xs font-mono"
+                          placeholder="gsk_..."
+                        />
+                      </div>
+                    )}
+
                     {/* OpenAI API Key */}
                     {((config.transcriptionProvider || "gemini") === "openai" || (config.visionProvider || "gemini") === "openai") && (
                       <div className="space-y-2 animate-fade-up">
@@ -1190,7 +1224,7 @@ export default function ConfigPage() {
                     <div className="flex items-center gap-2">
                       <i className={`${item.icon} ${item.color} text-sm`}></i>
                       <span className="font-bold text-xs text-[var(--text-1)]">{item.title}</span>
-                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.15)] border border-[rgba(168,85,247,0.2)] text-purple-400 font-bold">ATIVO</span>
+                      <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.15)] border border-[rgba(168,85,247,0.25)] text-purple-400 font-bold">ATIVO</span>
                     </div>
                     <p className="text-[11px] text-[var(--text-3)] leading-relaxed">{item.desc}</p>
                   </div>
@@ -1198,7 +1232,7 @@ export default function ConfigPage() {
               </div>
               <p className="text-[10px] text-[var(--text-3)] border-t border-[var(--border)] pt-3">
                 <i className="fa-solid fa-circle-info mr-1 text-purple-400"></i>
-                O processamento de mídia requer a <strong className="text-[var(--text-2)]">Gemini API Key</strong> ou a <strong className="text-[var(--text-2)]">OpenAI API Key</strong> devidamente configuradas na aba Provedores de IA.
+                O processamento de mídia requer a <strong className="text-[var(--text-2)]">Groq API Key</strong>, <strong className="text-[var(--text-2)]">Gemini API Key</strong> ou a <strong className="text-[var(--text-2)]">OpenAI API Key</strong> devidamente configuradas na aba Provedores de IA.
               </p>
             </div>
           </div>

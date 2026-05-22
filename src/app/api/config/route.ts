@@ -68,7 +68,7 @@ function sanitizeConfig(config: any) {
     ttsVoice: (config as any).ttsVoice || "Kore",
     ttsProvider: (config as any).ttsProvider || "gemini",
     cartesiaApiKey: (config as any).cartesiaApiKey || "",
-    cartesiaVoiceId: (config as any).cartesiaVoiceId || "a0e9987c-1f5c-43f1-a675-5841029f9dbe",
+    cartesiaVoiceId: (config as any).cartesiaVoiceId || "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4",
     scheduleEnabled: (config as any).scheduleEnabled ?? false,
     scheduleTimezone: (config as any).scheduleTimezone || "America/Sao_Paulo",
     scheduleDays: (config as any).scheduleDays || "[1,2,3,4,5]",
@@ -92,6 +92,14 @@ export async function GET(req: Request) {
 
   try {
     let config = await prisma.agentConfig.findFirst();
+    if (config && config.cartesiaVoiceId === "a0e9987c-1f5c-43f1-a675-5841029f9dbe") {
+      config = await prisma.agentConfig.update({
+        where: { id: config.id },
+        data: { cartesiaVoiceId: "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4" },
+      });
+      console.log("[Migration] Automatically migrated cartesiaVoiceId from Barbra (old) to Isabella (new).");
+    }
+
     if (!config) {
       config = await prisma.agentConfig.create({
         data: {
@@ -108,7 +116,7 @@ export async function GET(req: Request) {
           ttsVoice: "Kore",
           ttsProvider: "gemini",
           cartesiaApiKey: "sk_car_3yj7jJ1y5HpBhDNRGfBvHG",
-          cartesiaVoiceId: "a0e9987c-1f5c-43f1-a675-5841029f9dbe",
+          cartesiaVoiceId: "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4",
           scheduleEnabled: false,
           scheduleTimezone: "America/Sao_Paulo",
           scheduleDays: "[1,2,3,4,5]",
@@ -162,7 +170,7 @@ export async function PUT(req: Request) {
       ttsVoice: configData.ttsVoice || "Kore",
       ttsProvider: configData.ttsProvider || "gemini",
       cartesiaApiKey: configData.cartesiaApiKey || "",
-      cartesiaVoiceId: configData.cartesiaVoiceId || "a0e9987c-1f5c-43f1-a675-5841029f9dbe",
+      cartesiaVoiceId: configData.cartesiaVoiceId || "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4",
       scheduleEnabled: Boolean(configData.scheduleEnabled ?? false),
       scheduleTimezone: configData.scheduleTimezone || "America/Sao_Paulo",
       scheduleDays: configData.scheduleDays || "[1,2,3,4,5]",

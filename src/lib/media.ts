@@ -353,7 +353,7 @@ export function detectMediaType(messageContent: Record<string, any>): {
 export async function generateSpeechWithCartesia(
   text: string,
   apiKey: string,
-  voiceId = "a0e9987c-1f5c-43f1-a675-5841029f9dbe"
+  voiceId = "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4"
 ): Promise<string | null> {
   const safeText = text.substring(0, 4000);
   console.log(`[Media] Gerando Voz Cartesia | voz: ${voiceId} | texto: "${safeText.substring(0, 60)}..."`);
@@ -416,7 +416,7 @@ export async function generateSpeech(
 
   if (provider === "cartesia") {
     const apiKey = config.cartesiaApiKey || "sk_car_3yj7jJ1y5HpBhDNRGfBvHG";
-    const voiceId = config.cartesiaVoiceId || "a0e9987c-1f5c-43f1-a675-5841029f9dbe";
+    const voiceId = config.cartesiaVoiceId || "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4";
     if (!apiKey) {
       console.warn("[Media] Provedor de voz definido como Cartesia, mas chave de API está ausente.");
       return null;

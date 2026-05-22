@@ -62,7 +62,7 @@ export default function ConfigPage() {
     ttsVoice: "Kore",
     ttsProvider: "gemini",
     cartesiaApiKey: "sk_car_3yj7jJ1y5HpBhDNRGfBvHG",
-    cartesiaVoiceId: "a0e9987c-1f5c-43f1-a675-5841029f9dbe",
+    cartesiaVoiceId: "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4",
     scheduleEnabled: false,
     scheduleTimezone: "America/Sao_Paulo",
     scheduleDays: "[1,2,3,4,5]",
@@ -872,14 +872,34 @@ export default function ConfigPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {[
                       {
-                        name: "Barbra (Feminina Premium - Brasil)",
-                        id: "a0e9987c-1f5c-43f1-a675-5841029f9dbe",
-                        desc: "Voz suave, profissional e altamente cativante. Perfeita para atendimento.",
+                        name: "Isabella (Feminina Premium - Expressiva)",
+                        id: "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4",
+                        desc: "Voz rica, calorosa e altamente expressiva. Ideal para atendimento humanizado e narrações cativantes.",
                       },
                       {
-                        name: "Pedro (Masculina Premium - Brasil)",
-                        id: "e40938b8-7a5b-4de0-aa46-816b607062a4",
-                        desc: "Voz firme, natural, com ritmo claro e excelente dicção para vendas.",
+                        name: "Beatriz (Feminina Suave - Atendimento)",
+                        id: "d4b44b9a-82bc-4b65-b456-763fce4c52f9",
+                        desc: "Voz amigável, clara e profissional. Perfeita para suporte, guias e conversas formais de vendas.",
+                      },
+                      {
+                        name: "Mirella (Feminina Jovem - Conversacional)",
+                        id: "2f4d204f-a5dc-4196-81bc-155986b76ab6",
+                        desc: "Voz brilhante, jovem e descontraída. Ideal para diálogos casuais cotidianos e mensagens informais.",
+                      },
+                      {
+                        name: "Bruno (Masculina Premium - Corporativa)",
+                        id: "b603811e-54c2-4a0a-8854-09eab9ffa63f",
+                        desc: "Voz masculina clara, firme e confiável. Ideal para comunicação corporativa de alta credibilidade.",
+                      },
+                      {
+                        name: "Rafael (Masculina Dinâmica - Carismática)",
+                        id: "07b6f895-78b9-4921-8e10-8a21c99c2e8a",
+                        desc: "Voz altamente dinâmica, carismática e engajadora. Excelente para marketing e promoções.",
+                      },
+                      {
+                        name: "Gustavo (Masculina Firme - Vendas)",
+                        id: "28a942b5-74f3-47bb-9b56-4c3f2562d3ba",
+                        desc: "Voz calma, ponderada e estruturada. Suporta conselhos e explanações técnicas de vendas.",
                       },
                     ].map((v) => (
                       <button

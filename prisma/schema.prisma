@@ -29,7 +29,7 @@ model AgentConfig {
   ttsVoice            String   @default("Kore")
   ttsProvider         String   @default("gemini")
   cartesiaApiKey      String   @default("sk_car_3yj7jJ1y5HpBhDNRGfBvHG")
-  cartesiaVoiceId     String   @default("a0e9987c-1f5c-43f1-a675-5841029f9dbe")
+  cartesiaVoiceId     String   @default("c9611be8-aae9-4a93-bb1c-98dd6b7d52a4")
   scheduleEnabled     Boolean  @default(false)
   scheduleTimezone    String   @default("America/Sao_Paulo")
   scheduleDays        String   @default("[1,2,3,4,5]")

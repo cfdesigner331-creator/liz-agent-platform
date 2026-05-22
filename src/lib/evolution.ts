@@ -77,11 +77,11 @@ export async function sendWhatsAppAudio(
         "Content-Type": "application/json",
         "apikey": evolutionApiKey.trim(),
       },
-      body: JSON.stringify({
-        number: phone,
-        audio: `data:audio/wav;base64,${audioBase64}`,
-        delay: 1000,
-      }),
+        body: JSON.stringify({
+          number: phone,
+          audio: audioBase64,
+          delay: 1000,
+        }),
       signal: controller.signal,
     });
 

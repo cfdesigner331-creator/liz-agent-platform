@@ -329,8 +329,40 @@ export async function POST(req: Request) {
       content: msg.content,
     }));
 
-    // 13. Injetar contexto de mídia no sistema
-    let systemPromptWithMedia = config.systemPrompt;
+    // 13. Injetar contexto de Data/Hora e Fuso Horário para a IA responder saudações corretas
+    const timezone = (config as any).scheduleTimezone || "America/Sao_Paulo";
+    let nowInTz = new Date();
+    try {
+      const options = { timeZone: timezone, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false } as const;
+      const formatter = new Intl.DateTimeFormat("en-US", options);
+      const parts = formatter.formatToParts(new Date());
+      const getVal = (type: string) => parts.find(p => p.type === type)!.value;
+      const year = getVal("year");
+      const month = getVal("month");
+      const day = getVal("day");
+      const hour = getVal("hour");
+      const minute = getVal("minute");
+      const second = getVal("second");
+      nowInTz = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+    } catch (err) {
+      console.error("[Webhook] Erro ao computar timezone para a IA:", err);
+    }
+
+    const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+    const diaNome = diasSemana[nowInTz.getDay()];
+    const dataFormatada = nowInTz.toLocaleDateString("pt-BR");
+    const horaFormatada = nowInTz.toTimeString().split(" ")[0].substring(0, 5); // HH:MM
+
+    let systemPromptWithMedia = `[INFORMAÇÃO TEMPORAL - CRÍTICO]
+- Fuso Horário Configurado: ${timezone}
+- Data de Hoje: ${dataFormatada} (${diaNome})
+- Hora Atual: ${horaFormatada}
+* IMPORTANTE: Use a Hora Atual para determinar a saudação adequada.
+  - Se a hora for de 06:00 até 11:59, diga "Bom dia".
+  - Se a hora for de 12:00 até 17:59, diga "Boa tarde".
+  - Se a hora for de 18:00 até 05:59, diga "Boa noite".
+[FIM DA INFORMAÇÃO TEMPORAL]\n\n` + config.systemPrompt;
+
     if (mediaCaption && mediaInfo.type && mediaInfo.type !== "audio") {
       const mediaLabel =
         mediaInfo.type === "image" ? "imagem" :

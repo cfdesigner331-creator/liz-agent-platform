@@ -725,6 +725,39 @@ export default function ConfigPage() {
                 </div>
               )}
             </div>
+
+            {/* Fuso Horário do Agente */}
+            <div className="card space-y-4">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-earth-americas text-[var(--accent)] text-xs"></i>
+                Fuso Horário & Localização do Agente
+              </h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Configure o fuso horário da Liz. Isso será utilizado tanto para o <strong>horário de funcionamento (comercial/plantão)</strong> quanto para a <strong>IA saber a data e hora corretas do seu fuso horário</strong> ao saudar o cliente (evitando dar 'boa tarde' no período da manhã).
+              </p>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-[var(--text-2)]">Fuso Horário (Timezone)</label>
+                <select
+                  value={config.scheduleTimezone}
+                  onChange={(e) => updateField("scheduleTimezone", e.target.value)}
+                  className="field-input text-xs bg-[#090914] cursor-pointer"
+                >
+                  <option value="America/Sao_Paulo">America/Sao_Paulo (Horário de Brasília - DF, SP, RJ, Sul, Sudeste, Nordeste)</option>
+                  <option value="America/Bahia">America/Bahia (Bahia)</option>
+                  <option value="America/Fortaleza">America/Fortaleza (Ceará, Maranhão, Piauí, RN, PB, PE)</option>
+                  <option value="America/Recife">America/Recife (Pernambuco, Alagoas, Sergipe)</option>
+                  <option value="America/Manaus">America/Manaus (Amazonas - Fuso -1h)</option>
+                  <option value="America/Cuiaba">America/Cuiaba (Mato Grosso - Fuso -1h)</option>
+                  <option value="America/Porto_Velho">America/Porto_Velho (Rondônia - Fuso -1h)</option>
+                  <option value="America/Boa_Vista">America/Boa_Vista (Roraima - Fuso -1h)</option>
+                  <option value="America/Rio_Branco">America/Rio_Branco (Acre - Fuso -2h)</option>
+                  <option value="America/Noronha">America/Noronha (Fernando de Noronha - Fuso +1h)</option>
+                  <option value="America/New_York">America/New_York (EST - Fuso EUA Leste)</option>
+                  <option value="Europe/Lisbon">Europe/Lisbon (WET - Portugal Continental)</option>
+                  <option value="Europe/London">Europe/London (GMT - Reino Unido)</option>
+                </select>
+              </div>
+            </div>
           </div>
         )}
 

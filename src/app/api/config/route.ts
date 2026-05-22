@@ -140,6 +140,8 @@ function sanitizeConfig(config: any) {
     transcriptionProvider: (config as any).transcriptionProvider || "groq",
     visionProvider: (config as any).visionProvider || "groq",
     observationMode: Boolean((config as any).observationMode ?? false),
+    securityShieldActive: Boolean((config as any).securityShieldActive ?? true),
+    isDefaultPasswordActive: !config.customPassword || config.customPassword.trim() === "",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -206,6 +208,8 @@ export async function GET(req: Request) {
           transcriptionProvider: "groq",
           visionProvider: "groq",
           observationMode: false,
+          customPassword: "",
+          securityShieldActive: true,
         },
       });
     }
@@ -267,6 +271,7 @@ export async function PUT(req: Request) {
       transcriptionProvider: configData.transcriptionProvider || "groq",
       visionProvider: configData.visionProvider || "groq",
       observationMode: Boolean(configData.observationMode ?? false),
+      securityShieldActive: Boolean(configData.securityShieldActive ?? true),
     };
 
     let config = await prisma.agentConfig.findFirst();

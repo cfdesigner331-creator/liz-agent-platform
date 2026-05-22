@@ -454,7 +454,7 @@ export default function PlaygroundPage() {
             </form>
             <div className="flex justify-between items-center text-[10px] text-[var(--text-3)] px-1 mt-2">
               <span>* Pressione Enter para enviar</span>
-              <span>Liz Inteligência Comercial v2.4</span>
+              <span>AssistentePRO v2.5</span>
             </div>
           </div>
         </div>

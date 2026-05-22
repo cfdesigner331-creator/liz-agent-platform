@@ -21,8 +21,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Liz Agent Platform - Criações Freitas",
-  description: "Dashboard de orquestração autônoma e simulação para o chatbot inteligente comercial da Criações Freitas.",
+  title: "AssistentePRO | Gestão Universal de Bots",
+  description: "Plataforma avançada de orquestração autônoma, configuração e simulação inteligente de assistentes virtuais.",
 };
 
 export default function RootLayout({
@@ -34,6 +34,20 @@ export default function RootLayout({
     <html lang="pt-BR" className="scroll-smooth">
       <head>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossOrigin="anonymous" referrerPolicy="no-referrer" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('assistente_theme') || 'dark';
+                  var accent = localStorage.getItem('assistente_accent') || 'amber';
+                  document.documentElement.setAttribute('data-theme', theme);
+                  document.documentElement.setAttribute('data-accent', accent);
+                } catch (e) {}
+              })();
+            `
+          }}
+        />
       </head>
       <body
         className={`${syne.variable} ${dmSans.variable} ${jetbrainsMono.variable} antialiased`}

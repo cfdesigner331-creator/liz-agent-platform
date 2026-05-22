@@ -79,6 +79,8 @@ try {
         "transcriptionProvider" TEXT NOT NULL DEFAULT 'groq',
         "visionProvider" TEXT NOT NULL DEFAULT 'groq',
         "observationMode" BOOLEAN NOT NULL DEFAULT false,
+        "customPassword" TEXT NOT NULL DEFAULT '',
+        "securityShieldActive" BOOLEAN NOT NULL DEFAULT true,
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -215,6 +217,14 @@ try {
     if (!columns.includes("observationMode")) {
       console.log("[Migrate] Adicionando coluna 'observationMode' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "observationMode" BOOLEAN NOT NULL DEFAULT false').run();
+    }
+    if (!columns.includes("customPassword")) {
+      console.log("[Migrate] Adicionando coluna 'customPassword' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "customPassword" TEXT NOT NULL DEFAULT ""').run();
+    }
+    if (!columns.includes("securityShieldActive")) {
+      console.log("[Migrate] Adicionando coluna 'securityShieldActive' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "securityShieldActive" BOOLEAN NOT NULL DEFAULT true').run();
     }
 
     // Message table new columns

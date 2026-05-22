@@ -44,6 +44,8 @@ interface AgentConfig {
   groqTranscriptionModel?: string;
   groqVisionModel?: string;
   observationMode?: boolean;
+  securityShieldActive?: boolean;
+  isDefaultPasswordActive?: boolean;
 }
 
 export default function ConfigPage() {
@@ -88,6 +90,7 @@ export default function ConfigPage() {
     groqTranscriptionModel: "whisper-large-v3-turbo",
     groqVisionModel: "llama-3.2-11b-vision-preview",
     observationMode: false,
+    securityShieldActive: true,
   });
 
   const [loading, setLoading] = useState(true);
@@ -102,13 +105,29 @@ export default function ConfigPage() {
   const [showEvoKey, setShowEvoKey] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Appearance & Security controls
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [accent, setAccent] = useState<string>("amber");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
   // Active sub-tab
-  const [activeTab, setActiveTab] = useState<"ai" | "instructions" | "evolution" | "voice" | "schedule">("ai");
+  const [activeTab, setActiveTab] = useState<"ai" | "instructions" | "evolution" | "voice" | "schedule" | "appearance" | "security">("ai");
 
   useEffect(() => {
     // Generate full webhook URL dynamically based on location
     if (typeof window !== "undefined") {
       setWebhookUrl(`${window.location.origin}/api/webhook`);
+
+      const savedTheme = localStorage.getItem("assistente_theme") as "dark" | "light" || "dark";
+      const savedAccent = localStorage.getItem("assistente_accent") || "amber";
+      setTheme(savedTheme);
+      setAccent(savedAccent);
     }
 
     const loadConfig = async () => {
@@ -130,6 +149,68 @@ export default function ConfigPage() {
 
     loadConfig();
   }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("assistente_theme", nextTheme);
+      document.documentElement.setAttribute("data-theme", nextTheme);
+    }
+  };
+
+  const handleUpdateAccent = (newAccent: string) => {
+    setAccent(newAccent);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("assistente_accent", newAccent);
+      document.documentElement.setAttribute("data-accent", newAccent);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!newPassword) {
+      setPasswordError("A nova senha não pode ser vazia.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("As senhas não coincidem.");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setPasswordSuccess("Senha alterada com sucesso!");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        
+        // Refresh config to update isDefaultPasswordActive
+        const configRes = await fetch("/api/config");
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          setConfig(configData);
+        }
+      } else {
+        setPasswordError(data.error || "Falha ao alterar senha.");
+      }
+    } catch (err) {
+      setPasswordError("Erro ao conectar ao servidor.");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   const handleCopyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
@@ -200,6 +281,25 @@ export default function ConfigPage() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* TEMA CLARO/ESCURO Toggle */}
+          <button
+            key="theme-toggle"
+            type="button"
+            onClick={handleToggleTheme}
+            className="p-2 rounded-xl border border-[var(--border)] bg-[rgba(255,255,255,0.02)] text-[var(--text-2)] hover:text-[var(--text-1)] hover:bg-[var(--surface-2)] transition-all cursor-pointer flex items-center justify-center w-9 h-9"
+            title="Alternar Tema"
+          >
+            {theme === "dark" ? (
+              <svg className="w-4 h-4 fill-current text-amber-400 animate-pulse" viewBox="0 0 20 20">
+                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464-5.636a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-5.636 4.464a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM6.343 14.657a1 1 0 010-1.414l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM4 9a1 1 0 100 2H3a1 1 0 100-2h1zm1.414-4.464a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0z" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 fill-current text-indigo-500 animate-pulse" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+              </svg>
+            )}
+          </button>
+
           {/* MODO TREINAMENTO Toggle */}
           <button
             type="button"
@@ -328,6 +428,30 @@ export default function ConfigPage() {
         >
           <i className="fa-solid fa-clock mr-2 text-xs"></i>
           Horário de Atendimento
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("appearance")}
+          className={`pb-3 px-2 font-[var(--font-display)] text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
+            activeTab === "appearance"
+              ? "border-[var(--accent)] text-[var(--accent-text)] font-bold"
+              : "border-transparent text-[var(--text-2)] hover:text-[var(--text-1)]"
+          }`}
+        >
+          <i className="fa-solid fa-palette mr-2 text-xs"></i>
+          Aparência
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("security")}
+          className={`pb-3 px-2 font-[var(--font-display)] text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
+            activeTab === "security"
+              ? "border-red-500 text-red-400 font-bold"
+              : "border-transparent text-[var(--text-2)] hover:text-[var(--text-1)]"
+          }`}
+        >
+          <i className="fa-solid fa-shield-halved mr-2 text-xs"></i>
+          Segurança
         </button>
       </div>
 
@@ -1720,6 +1844,264 @@ export default function ConfigPage() {
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 6: APARÊNCIA */}
+        {activeTab === "appearance" && (
+          <div className="space-y-6 animate-fade-up">
+            <div className="card space-y-6">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-palette text-[var(--accent)] text-xs"></i>
+                Tema da Plataforma
+              </h3>
+              <p className="text-xs text-[var(--text-2)]">
+                Selecione o modo de exibição visual para a interface do AssistentePRO.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTheme("light");
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("assistente_theme", "light");
+                      document.documentElement.setAttribute("data-theme", "light");
+                    }
+                  }}
+                  className={`p-5 rounded-xl border text-left cursor-pointer transition-all flex items-center gap-4 ${
+                    theme === "light"
+                      ? "border-[var(--accent)] bg-[rgba(var(--accent-rgb),0.06)] shadow-[0_0_12px_rgba(var(--accent-rgb),0.1)]"
+                      : "bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-3)]"
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-sm text-amber-500 text-lg">
+                    ☀️
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-xs font-bold text-[var(--text-1)] block">Modo Claro</span>
+                    <span className="text-[10px] text-[var(--text-3)] block mt-0.5">Interface limpa de alto contraste lavanda</span>
+                  </div>
+                  {theme === "light" && (
+                    <i className="fa-solid fa-circle-check text-[var(--accent)]"></i>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTheme("dark");
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("assistente_theme", "dark");
+                      document.documentElement.setAttribute("data-theme", "dark");
+                    }
+                  }}
+                  className={`p-5 rounded-xl border text-left cursor-pointer transition-all flex items-center gap-4 ${
+                    theme === "dark"
+                      ? "border-[var(--accent)] bg-[rgba(var(--accent-rgb),0.06)] shadow-[0_0_12px_rgba(var(--accent-rgb),0.1)]"
+                      : "bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-3)]"
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-[#06060E] border border-slate-900 flex items-center justify-center shrink-0 shadow-sm text-indigo-400 text-lg">
+                    🌙
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-xs font-bold text-[var(--text-1)] block">Modo Escuro (Padrão)</span>
+                    <span className="text-[10px] text-[var(--text-3)] block mt-0.5">Fundo escuro imersivo com brilhos sutis</span>
+                  </div>
+                  {theme === "dark" && (
+                    <i className="fa-solid fa-circle-check text-[var(--accent)]"></i>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="card space-y-6">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-wand-magic-sparkles text-[var(--accent)] text-xs"></i>
+                Paleta de Cores (Destaque Accent)
+              </h3>
+              <p className="text-xs text-[var(--text-2)]">
+                Escolha a cor de destaque que será aplicada em botões, bordas ativas e efeitos de iluminação em toda a plataforma.
+              </p>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {[
+                  { id: "amber", name: "Amber Gold", color: "#F0A020", rgb: "240, 160, 32" },
+                  { id: "blue", name: "Ocean Blue", color: "#0A84FF", rgb: "10, 132, 255" },
+                  { id: "emerald", name: "Emerald Green", color: "#30D158", rgb: "48, 209, 88" },
+                  { id: "violet", name: "Fierce Violet", color: "#BF5AF2", rgb: "191, 90, 242" },
+                  { id: "crimson", name: "Crimson Red", color: "#FF453A", rgb: "255, 69, 58" },
+                  { id: "pink", name: "Rose Pink", color: "#FF375F", rgb: "255, 55, 95" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleUpdateAccent(item.id)}
+                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex items-center gap-3 ${
+                      accent === item.id
+                        ? "bg-[rgba(var(--accent-rgb),0.06)]"
+                        : "bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-3)]"
+                    }`}
+                    style={{
+                      borderColor: accent === item.id ? `rgb(${item.rgb})` : "var(--border)",
+                      boxShadow: accent === item.id ? `0 0 16px rgba(${item.rgb}, 0.12)` : undefined
+                    }}
+                  >
+                    <span
+                      className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-xs font-bold text-[var(--text-1)] flex-1">{item.name}</span>
+                    {accent === item.id && (
+                      <i className="fa-solid fa-circle-check text-xs shrink-0" style={{ color: item.color }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 7: SEGURANÇA */}
+        {activeTab === "security" && (
+          <div className="space-y-6 animate-fade-up">
+            <div className="card grid grid-cols-1 md:grid-cols-3 gap-6 items-center p-6 border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.02)]">
+              <div className="flex justify-center md:justify-start">
+                {/* Pulsing SVG Shield */}
+                <div className="relative w-28 h-28 flex items-center justify-center security-pulse">
+                  <svg className="w-24 h-24 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                </div>
+              </div>
+              
+              <div className="md:col-span-2 space-y-4">
+                <div>
+                  <h3 className="font-[var(--font-display)] font-bold text-base text-[var(--text-1)] flex items-center gap-2">
+                    🛡️ Escudo de Autodefesa Ativo
+                  </h3>
+                  <p className="text-xs text-[var(--text-2)] leading-relaxed mt-1">
+                    O sistema de segurança monitora tentativas de acesso consecutivas malsucedidas. Caso ocorram <strong className="text-red-400">10 falhas de login por senha incorreta</strong>, o sistema entra em modo de bloqueio e apaga imediatamente as credenciais sensíveis salvas (API Keys do OpenAI, Groq, Gemini, Cartesia e Evolution) do banco de dados para evitar vazamento ou sequestro de chaves.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-[var(--border)] pt-4">
+                  <div>
+                    <span className="text-xs font-bold text-[var(--text-1)]">Status da Autodefesa</span>
+                    <p className="text-[10px] text-[var(--text-3)] mt-0.5">Se ativado, executa o apagamento automático em ataques de força bruta.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateField("securityShieldActive", !config.securityShieldActive)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
+                      config.securityShieldActive ? "bg-red-500" : "bg-[#1C1C38]"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        config.securityShieldActive ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="card space-y-6">
+              <div>
+                <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                  <i className="fa-solid fa-key text-[var(--accent)] text-xs"></i>
+                  Senha do Painel Administrativo
+                </h3>
+                <p className="text-xs text-[var(--text-2)] mt-1.5 leading-relaxed">
+                  Para proteger suas conexões de IA e as configurações do WhatsApp, certifique-se de definir uma senha personalizada de alta complexidade.
+                </p>
+              </div>
+
+              {config.isDefaultPasswordActive && (
+                <div className="p-4 rounded-xl border border-[rgba(245,158,11,0.25)] bg-[rgba(245,158,11,0.06)] flex gap-3 text-amber-500">
+                  <i className="fa-solid fa-triangle-exclamation text-base shrink-0 mt-0.5 animate-pulse"></i>
+                  <div>
+                    <strong className="text-xs font-bold block">Senha Padrão Ativa</strong>
+                    <span className="text-[11px] leading-normal block mt-0.5">Você está acessando a plataforma sem nenhuma senha personalizada de administrador (senha em branco padrão). É altamente recomendável cadastrar uma senha imediatamente abaixo.</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">Senha Atual</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Deixe em branco se for a padrão"
+                      className="field-input text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">Nova Senha</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Nova senha de administrador"
+                      className="field-input text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">Confirmar Nova Senha</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirme a nova senha"
+                      className="field-input text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[var(--border)] pt-4">
+                  {passwordError && (
+                    <span className="text-xs text-[var(--error)] flex items-center gap-1.5 font-semibold">
+                      <i className="fa-solid fa-triangle-exclamation"></i>
+                      <span>{passwordError}</span>
+                    </span>
+                  )}
+
+                  {passwordSuccess && (
+                    <span className="text-xs text-[var(--success)] flex items-center gap-1.5 font-semibold">
+                      <i className="fa-solid fa-circle-check"></i>
+                      <span>{passwordSuccess}</span>
+                    </span>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={passwordSaving}
+                    onClick={handleChangePassword}
+                    className="btn-primary w-full md:w-auto md:ml-auto px-6 cursor-pointer text-xs shrink-0"
+                  >
+                    {passwordSaving ? (
+                      <span className="dot-pulse">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </span>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-lock text-xs"></i>
+                        <span>Alterar Senha do Painel</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

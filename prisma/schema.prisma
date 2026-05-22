@@ -48,6 +48,8 @@ model AgentConfig {
   transcriptionProvider String @default("groq")
   visionProvider        String @default("groq")
   observationMode       Boolean  @default(false)
+  customPassword        String   @default("")
+  securityShieldActive  Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

@@ -37,6 +37,8 @@ interface AgentConfig {
   schedulePlantaoEnd1?: string;
   schedulePlantaoStart2?: string;
   schedulePlantaoEnd2?: string;
+  textTitleEnabled?: boolean;
+  textTitle?: string;
 }
 
 export default function ConfigPage() {
@@ -74,6 +76,8 @@ export default function ConfigPage() {
     schedulePlantaoEnd1: "12:00",
     schedulePlantaoStart2: "13:00",
     schedulePlantaoEnd2: "17:30",
+    textTitleEnabled: false,
+    textTitle: "Liz | Assistente Virtual",
   });
 
   const [loading, setLoading] = useState(true);
@@ -593,82 +597,133 @@ export default function ConfigPage() {
 
         {/* TAB 3: EVOLUTION CONFIGURATIONS */}
         {activeTab === "evolution" && (
-          <div className="card space-y-6 animate-fade-up">
-            <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3">
-              Credenciais e Modos da Evolution API
-            </h3>
+          <div className="space-y-6 animate-fade-up">
+            <div className="card space-y-6">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3">
+                Credenciais e Modos da Evolution API
+              </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-[var(--text-2)]">
-                  Evolution Base URL
-                </label>
-                <input
-                  type="url"
-                  value={config.evolutionUrl}
-                  onChange={(e) => updateField("evolutionUrl", e.target.value)}
-                  className="field-input text-xs font-mono"
-                  placeholder="Ex: https://evo.meudominio.com"
-                />
-                <span className="text-[10px] text-[var(--text-3)]">
-                  Endereço base do seu servidor VPS onde o container Evolution API está escutando.
-                </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">
+                    Evolution Base URL
+                  </label>
+                  <input
+                    type="url"
+                    value={config.evolutionUrl}
+                    onChange={(e) => updateField("evolutionUrl", e.target.value)}
+                    className="field-input text-xs font-mono"
+                    placeholder="Ex: https://evo.meudominio.com"
+                  />
+                  <span className="text-[10px] text-[var(--text-3)]">
+                    Endereço base do seu servidor VPS onde o container Evolution API está escutando.
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">
+                    Nome da Instância (Instance Name)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.instanceId}
+                    onChange={(e) => updateField("instanceId", e.target.value)}
+                    className="field-input text-xs font-mono"
+                    placeholder="Ex: liz-whatsapp"
+                  />
+                  <span className="text-[10px] text-[var(--text-3)]">
+                    O nome exato do pool de conexões criado no painel da sua Evolution API.
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                    <span>Chave de API (Global ApiKey)</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowEvoKey(!showEvoKey)}
+                      className="text-[10px] text-[var(--accent-text)] hover:underline"
+                    >
+                      {showEvoKey ? "Ocultar" : "Mostrar"}
+                    </button>
+                  </label>
+                  <input
+                    type={showEvoKey ? "text" : "password"}
+                    value={config.evolutionApiKey}
+                    onChange={(e) => updateField("evolutionApiKey", e.target.value)}
+                    className="field-input text-xs font-mono"
+                    placeholder="SuaApiKeyEvolution..."
+                  />
+                  <span className="text-[10px] text-[var(--text-3)]">
+                    Utilizado para autenticar os disparos automáticos HTTP de retorno de mensagens.
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">
+                    Lista de Números Permitidos (Piloto)
+                  </label>
+                  <input
+                    type="text"
+                    value={config.allowedPhones}
+                    onChange={(e) => updateField("allowedPhones", e.target.value)}
+                    className="field-input text-xs font-mono"
+                    placeholder="Ex: 5511999999999, 5521988888888"
+                  />
+                  <span className="text-[10px] text-[var(--text-3)] font-semibold">
+                    * Deixe vazio para responder a QUALQUER número de WhatsApp recebido.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Identidade nas Mensagens de Texto */}
+            <div className="card space-y-6">
+              <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
+                <div>
+                  <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] flex items-center gap-2">
+                    <i className="fa-solid fa-signature text-[var(--accent)] text-xs"></i>
+                    Título / Identidade da Assistente (Mensagens de Texto)
+                  </h3>
+                  <p className="text-xs text-[var(--text-3)] mt-0.5">
+                    Insere o nome da assistente em negrito no topo da primeira mensagem de texto enviada no WhatsApp.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateField("textTitleEnabled", !config.textTitleEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none ${
+                    config.textTitleEnabled ? "bg-[var(--accent)]" : "bg-[#1C1C38]"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      config.textTitleEnabled ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-[var(--text-2)]">
-                  Nome da Instância (Instance Name)
-                </label>
-                <input
-                  type="text"
-                  value={config.instanceId}
-                  onChange={(e) => updateField("instanceId", e.target.value)}
-                  className="field-input text-xs font-mono"
-                  placeholder="Ex: liz-whatsapp"
-                />
-                <span className="text-[10px] text-[var(--text-3)]">
-                  O nome exato do pool de conexões criado no painel da sua Evolution API.
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
-                  <span>Chave de API (Global ApiKey)</span>
-                  <button
-                    type="button"
-                    onClick={() => setShowEvoKey(!showEvoKey)}
-                    className="text-[10px] text-[var(--accent-text)] hover:underline"
-                  >
-                    {showEvoKey ? "Ocultar" : "Mostrar"}
-                  </button>
-                </label>
-                <input
-                  type={showEvoKey ? "text" : "password"}
-                  value={config.evolutionApiKey}
-                  onChange={(e) => updateField("evolutionApiKey", e.target.value)}
-                  className="field-input text-xs font-mono"
-                  placeholder="SuaApiKeyEvolution..."
-                />
-                <span className="text-[10px] text-[var(--text-3)]">
-                  Utilizado para autenticar os disparos automáticos HTTP de retorno de mensagens.
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-[var(--text-2)]">
-                  Lista de Números Permitidos (Piloto)
-                </label>
-                <input
-                  type="text"
-                  value={config.allowedPhones}
-                  onChange={(e) => updateField("allowedPhones", e.target.value)}
-                  className="field-input text-xs font-mono"
-                  placeholder="Ex: 5511999999999, 5521988888888"
-                />
-                <span className="text-[10px] text-[var(--text-3)] font-semibold">
-                  * Deixe vazio para responder a QUALQUER número de WhatsApp recebido.
-                </span>
-              </div>
+              {config.textTitleEnabled && (
+                <div className="space-y-4 animate-fade-up">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      Título do Assistente (Nome Exibido)
+                    </label>
+                    <input
+                      type="text"
+                      value={config.textTitle || ""}
+                      onChange={(e) => updateField("textTitle", e.target.value)}
+                      className="field-input text-xs font-semibold"
+                      placeholder="Ex: Liz | Assistente Virtual"
+                      required
+                    />
+                    <span className="text-[10px] text-[var(--text-3)]">
+                      Nome que aparecerá em negrito no topo da mensagem. Exemplo: <strong className="text-[var(--text-2)]">*{config.textTitle || "Liz | Assistente Virtual"}*</strong>
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

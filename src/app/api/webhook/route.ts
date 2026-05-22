@@ -547,13 +547,18 @@ export async function POST(req: Request) {
           const typingMs = Math.min(4500, Math.max(1500, textChunks[i].length * 20));
           await new Promise(resolve => setTimeout(resolve, typingMs));
 
-          // 3. Envia o fragmento de texto
+          // 3. Envia o fragmento de texto (com opcional de título em negrito no primeiro fragmento)
+          let chunkToSend = textChunks[i];
+          if (i === 0 && (config as any).textTitleEnabled && (config as any).textTitle) {
+            chunkToSend = `*${(config as any).textTitle.trim()}*\n\n${chunkToSend}`;
+          }
+
           await sendWhatsAppMessage(
             config.evolutionUrl,
             config.evolutionApiKey,
             config.instanceId,
             remoteJid,
-            textChunks[i]
+            chunkToSend
           );
 
           // 4. Se for a primeira mensagem enviada do lote, marcar a mensagem do cliente como lida

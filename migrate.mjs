@@ -72,6 +72,8 @@ try {
         "schedulePlantaoEnd1" TEXT NOT NULL DEFAULT '12:00',
         "schedulePlantaoStart2" TEXT NOT NULL DEFAULT '13:00',
         "schedulePlantaoEnd2" TEXT NOT NULL DEFAULT '17:30',
+        "textTitleEnabled" BOOLEAN NOT NULL DEFAULT false,
+        "textTitle" TEXT NOT NULL DEFAULT 'Liz | Assistente Virtual',
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -180,6 +182,14 @@ try {
     if (!columns.includes("schedulePlantaoEnd2")) {
       console.log("[Migrate] Adicionando coluna 'schedulePlantaoEnd2' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "schedulePlantaoEnd2" TEXT NOT NULL DEFAULT "17:30"').run();
+    }
+    if (!columns.includes("textTitleEnabled")) {
+      console.log("[Migrate] Adicionando coluna 'textTitleEnabled' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "textTitleEnabled" BOOLEAN NOT NULL DEFAULT false').run();
+    }
+    if (!columns.includes("textTitle")) {
+      console.log("[Migrate] Adicionando coluna 'textTitle' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "textTitle" TEXT NOT NULL DEFAULT "Liz | Assistente Virtual"').run();
     }
 
     // Message table new columns

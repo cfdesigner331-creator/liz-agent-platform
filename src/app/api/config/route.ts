@@ -80,6 +80,8 @@ function sanitizeConfig(config: any) {
     schedulePlantaoEnd1: (config as any).schedulePlantaoEnd1 || "12:00",
     schedulePlantaoStart2: (config as any).schedulePlantaoStart2 || "13:00",
     schedulePlantaoEnd2: (config as any).schedulePlantaoEnd2 || "17:30",
+    textTitleEnabled: (config as any).textTitleEnabled ?? false,
+    textTitle: (config as any).textTitle || "Liz | Assistente Virtual",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
   };
@@ -128,6 +130,8 @@ export async function GET(req: Request) {
           schedulePlantaoEnd1: "12:00",
           schedulePlantaoStart2: "13:00",
           schedulePlantaoEnd2: "17:30",
+          textTitleEnabled: false,
+          textTitle: "Liz | Assistente Virtual",
         },
       });
     }
@@ -182,6 +186,8 @@ export async function PUT(req: Request) {
       schedulePlantaoEnd1: configData.schedulePlantaoEnd1 || "12:00",
       schedulePlantaoStart2: configData.schedulePlantaoStart2 || "13:00",
       schedulePlantaoEnd2: configData.schedulePlantaoEnd2 || "17:30",
+      textTitleEnabled: Boolean(configData.textTitleEnabled ?? false),
+      textTitle: configData.textTitle || "Liz | Assistente Virtual",
     };
 
     let config = await prisma.agentConfig.findFirst();

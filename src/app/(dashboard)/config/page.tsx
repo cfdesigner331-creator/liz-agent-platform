@@ -963,7 +963,7 @@ export default function ConfigPage() {
                 {/* Recomendação de Vozes Cartesia */}
                 <div className="space-y-3 pt-2">
                   <label className="text-[11px] uppercase font-bold tracking-wider text-[var(--text-3)] block">
-                    Vozes em Português Recomendadas
+                    Vozes em Português Recomendadas &amp; Personalização
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {[
@@ -1022,6 +1022,51 @@ export default function ConfigPage() {
                         </code>
                       </button>
                     ))}
+
+                    {/* Custom Voice Card Option */}
+                    {(() => {
+                      const recommendedIds = [
+                        "c9611be8-aae9-4a93-bb1c-98dd6b7d52a4",
+                        "d4b44b9a-82bc-4b65-b456-763fce4c52f9",
+                        "2f4d204f-a5dc-4196-81bc-155986b76ab6",
+                        "b603811e-54c2-4a0a-8854-09eab9ffa63f",
+                        "07b6f895-78b9-4921-8e10-8a21c99c2e8a",
+                        "28a942b5-74f3-47bb-9b56-4c3f2562d3ba"
+                      ];
+                      const isCustom = !recommendedIds.includes(config.cartesiaVoiceId || "");
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!isCustom) {
+                              updateField("cartesiaVoiceId", "");
+                            }
+                          }}
+                          className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1 relative ${
+                            isCustom
+                              ? "bg-[rgba(168,85,247,0.1)] border-[rgba(168,85,247,0.4)] shadow-[0_0_12px_rgba(168,85,247,0.1)]"
+                              : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 justify-between">
+                            <span className={`font-bold text-xs ${isCustom ? "text-purple-300" : "text-[var(--text-1)]"}`}>
+                              🎙️ Minha Voz Personalizada / Clonada
+                            </span>
+                            {isCustom && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.2)] border border-[rgba(168,85,247,0.3)] text-purple-400 font-bold">ATIVADO</span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-[var(--text-3)] leading-relaxed mt-0.5">
+                            Selecione para usar sua própria voz customizada ou clonada no console da Cartesia. Basta digitar ou colar o UUID no campo "ID de Voz Cartesia (UUID)" acima!
+                          </span>
+                          {isCustom && config.cartesiaVoiceId && (
+                            <code className="text-[9px] font-mono mt-1 text-purple-400/80 bg-[#14142b] py-0.5 px-1.5 rounded self-start truncate max-w-full">
+                              {config.cartesiaVoiceId}
+                            </code>
+                          )}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

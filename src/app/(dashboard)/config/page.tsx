@@ -1114,6 +1114,64 @@ export default function ConfigPage() {
                   </div>
                 </div>
               </div>
+
+              {/* DYNAMIC API KEYS FOR MEDIA */}
+              {(((config.transcriptionProvider || "gemini") === "openai" || (config.visionProvider || "gemini") === "openai") ||
+                ((config.transcriptionProvider || "gemini") === "gemini" || (config.visionProvider || "gemini") === "gemini")) && (
+                <div className="border-t border-[var(--border)] pt-5 mt-4 space-y-4">
+                  <h4 className="text-xs font-bold text-[var(--text-1)] flex items-center gap-1.5">
+                    <i className="fa-solid fa-key text-purple-400"></i>
+                    Configuração de Chaves de API para Mídia
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* OpenAI API Key */}
+                    {((config.transcriptionProvider || "gemini") === "openai" || (config.visionProvider || "gemini") === "openai") && (
+                      <div className="space-y-2 animate-fade-up">
+                        <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                          <span>OpenAI API Key (Whisper / Vision)</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowOpenaiKey(!showOpenaiKey)}
+                            className="text-[10px] text-[var(--accent-text)] hover:underline"
+                          >
+                            {showOpenaiKey ? "Ocultar" : "Mostrar"}
+                          </button>
+                        </label>
+                        <input
+                          type={showOpenaiKey ? "text" : "password"}
+                          value={config.openaiApiKey || ""}
+                          onChange={(e) => updateField("openaiApiKey", e.target.value)}
+                          className="field-input text-xs font-mono"
+                          placeholder="sk-..."
+                        />
+                      </div>
+                    )}
+
+                    {/* Gemini API Key */}
+                    {((config.transcriptionProvider || "gemini") === "gemini" || (config.visionProvider || "gemini") === "gemini") && (
+                      <div className="space-y-2 animate-fade-up">
+                        <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                          <span>Gemini API Key (Transcrição / Visão)</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowGeminiKey(!showGeminiKey)}
+                            className="text-[10px] text-[var(--accent-text)] hover:underline"
+                          >
+                            {showGeminiKey ? "Ocultar" : "Mostrar"}
+                          </button>
+                        </label>
+                        <input
+                          type={showGeminiKey ? "text" : "password"}
+                          value={config.geminiApiKey || ""}
+                          onChange={(e) => updateField("geminiApiKey", e.target.value)}
+                          className="field-input text-xs font-mono"
+                          placeholder="AIzaSy..."
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Media Processing Info */}

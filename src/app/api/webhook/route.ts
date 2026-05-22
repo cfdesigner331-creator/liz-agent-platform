@@ -36,9 +36,71 @@ export async function POST(req: Request) {
 
     const { remoteJid, fromMe, id: messageId } = data.key;
 
-    // 2. Ignorar mensagens enviadas por nós mesmos
+    // 2. Tratar mensagens enviadas por nós mesmos (ou atendentes humanos)
     if (fromMe === true) {
-      return NextResponse.json({ ok: true, ignored: "mensagem_propria" });
+      // Se já existe no banco, ignora (foi enviado pela própria IA e salvo anteriormente)
+      const existingMsg = await prisma.message.findUnique({
+        where: { id: messageId }
+      });
+      if (existingMsg) {
+        return NextResponse.json({ ok: true, ignored: "mensagem_propria_ja_salva" });
+      }
+
+      // Caso contrário, a mensagem foi enviada por um atendente humano diretamente no WhatsApp!
+      const phone = remoteJid.replace("@s.whatsapp.net", "");
+      let conversation = await prisma.conversation.findFirst({
+        where: { source: "whatsapp", phone },
+      });
+      if (!conversation) {
+        conversation = await prisma.conversation.create({
+          data: { source: "whatsapp", phone },
+        });
+      }
+
+      const messageContent = data.message;
+      let agentMessageText = "";
+      if (messageContent) {
+        if (messageContent.conversation) {
+          agentMessageText = messageContent.conversation;
+        } else if (messageContent.extendedTextMessage?.text) {
+          agentMessageText = messageContent.extendedTextMessage.text;
+        } else if (messageContent.imageMessage) {
+          agentMessageText = messageContent.imageMessage.caption || "[Imagem enviada pelo atendente]";
+        } else if (messageContent.videoMessage) {
+          agentMessageText = messageContent.videoMessage.caption || "[Vídeo enviado pelo atendente]";
+        } else if (messageContent.audioMessage) {
+          agentMessageText = "[Áudio enviado pelo atendente]";
+        } else if (messageContent.documentMessage) {
+          agentMessageText = messageContent.documentMessage.title ? `[Documento: ${messageContent.documentMessage.title}]` : "[Documento enviado pelo atendente]";
+        } else {
+          // Captura genérica para outros tipos de mídia/mensagem enviados pelo atendente
+          const keys = Object.keys(messageContent);
+          const typeName = keys.length > 0 ? keys[0] : "";
+          if (typeName) {
+            agentMessageText = `[Mensagem tipo ${typeName} enviada pelo atendente]`;
+          }
+        }
+      }
+
+      if (agentMessageText.trim()) {
+        await prisma.message.create({
+          data: {
+            id: messageId,
+            conversationId: conversation.id,
+            role: "model", // Atendente humano usa papel de model para o histórico do chat da IA
+            content: agentMessageText.trim(),
+          },
+        });
+
+        await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { updatedAt: new Date() },
+        });
+
+        console.log(`[Webhook] Mensagem do atendente humano salva no histórico para +${phone}: ${agentMessageText.trim().substring(0, 50)}...`);
+      }
+
+      return NextResponse.json({ ok: true, saved: "mensagem_atendente_humano" });
     }
 
     // 3. Ignorar grupos
@@ -93,116 +155,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: "agente_desativado" });
     }
 
-    // 6.1. Verificar Horário de Atendimento (Schedule)
-    if ((config as any).scheduleEnabled) {
-      const timezone = (config as any).scheduleTimezone || "America/Sao_Paulo";
-      
-      // Obter data/hora atual no timezone configurado
-      let nowInTz: Date;
-      try {
-        const options = { timeZone: timezone, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false } as const;
-        const formatter = new Intl.DateTimeFormat("en-US", options);
-        const parts = formatter.formatToParts(new Date());
-        
-        const getVal = (type: string) => parts.find(p => p.type === type)!.value;
-        const year = getVal("year");
-        const month = getVal("month");
-        const day = getVal("day");
-        const hour = getVal("hour");
-        const minute = getVal("minute");
-        const second = getVal("second");
-        
-        nowInTz = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
-      } catch (err) {
-        console.error("[Webhook] Erro ao computar timezone, usando local:", err);
-        nowInTz = new Date();
-      }
 
-      const currentDay = nowInTz.getDay(); // 0 = Domingo, 1 = Segunda, etc.
-      const currentHours = nowInTz.getHours();
-      const currentMinutes = nowInTz.getMinutes();
-      const currentTimeMinutes = currentHours * 60 + currentMinutes;
-
-      const mode = (config as any).scheduleMode || "normal";
-
-      if (mode === "plantao") {
-        // Modo Plantão / Pós-Horário: Silenciado nos horários comerciais de segunda a sexta (humanos atendendo)
-        const isWeekday = currentDay >= 1 && currentDay <= 5;
-        if (isWeekday) {
-          // Parse janela 1 (Manhã, ex: "07:30" às "12:00")
-          let pStartMinutes1 = 7 * 60 + 30;
-          const pStartParts1 = ((config as any).schedulePlantaoStart1 || "07:30").split(":");
-          if (pStartParts1.length === 2) {
-            pStartMinutes1 = parseInt(pStartParts1[0]) * 60 + parseInt(pStartParts1[1]);
-          }
-
-          let pEndMinutes1 = 12 * 60;
-          const pEndParts1 = ((config as any).schedulePlantaoEnd1 || "12:00").split(":");
-          if (pEndParts1.length === 2) {
-            pEndMinutes1 = parseInt(pEndParts1[0]) * 60 + parseInt(pEndParts1[1]);
-          }
-
-          // Parse janela 2 (Tarde, ex: "13:00" às "17:30")
-          let pStartMinutes2 = 13 * 60;
-          const pStartParts2 = ((config as any).schedulePlantaoStart2 || "13:00").split(":");
-          if (pStartParts2.length === 2) {
-            pStartMinutes2 = parseInt(pStartParts2[0]) * 60 + parseInt(pStartParts2[1]);
-          }
-
-          let pEndMinutes2 = 17 * 60 + 30;
-          const pEndParts2 = ((config as any).schedulePlantaoEnd2 || "17:30").split(":");
-          if (pEndParts2.length === 2) {
-            pEndMinutes2 = parseInt(pEndParts2[0]) * 60 + parseInt(pEndParts2[1]);
-          }
-
-          const inWindow1 = currentTimeMinutes >= pStartMinutes1 && currentTimeMinutes <= pEndMinutes1;
-          const inWindow2 = currentTimeMinutes >= pStartMinutes2 && currentTimeMinutes <= pEndMinutes2;
-
-          if (inWindow1 || inWindow2) {
-            console.log(`[Webhook] Silenciador Plantão: Humanos atendendo. Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}. Bot ignorado.`);
-            return NextResponse.json({ ok: true, ignored: "silenciador_plantao_humanos" });
-          }
-        }
-        // Fins de semana e horários fora das janelas (ex: almoço e noites) -> bot atende normalmente
-      } else {
-        // Modo Comercial Tradicional
-        let allowedDays: number[] = [1, 2, 3, 4, 5];
-        try {
-          allowedDays = JSON.parse((config as any).scheduleDays || "[1,2,3,4,5]");
-        } catch (e) {
-          console.error("[Webhook] Erro ao parsear scheduleDays:", e);
-        }
-
-        let startMinutes = 8 * 60; // 08:00
-        const startParts = ((config as any).scheduleStartTime || "08:00").split(":");
-        if (startParts.length === 2) {
-          startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
-        }
-
-        let endMinutes = 18 * 60; // 18:00
-        const endParts = ((config as any).scheduleEndTime || "18:00").split(":");
-        if (endParts.length === 2) {
-          endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
-        }
-
-        const isDayAllowed = allowedDays.includes(currentDay);
-        const isTimeAllowed = currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
-
-        if (!isDayAllowed || !isTimeAllowed) {
-          console.log(`[Webhook] Fora do expediente. Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}. Enviando mensagem de ausência.`);
-          if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
-            await sendWhatsAppMessage(
-              config.evolutionUrl,
-              config.evolutionApiKey,
-              config.instanceId,
-              remoteJid,
-              (config as any).scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"
-            );
-          }
-          return NextResponse.json({ ok: true, ignored: "fora_de_horario" });
-        }
-      }
-    }
 
     // 7. Verificar allowedPhones
     if (config.allowedPhones && config.allowedPhones.trim() !== "") {
@@ -312,6 +265,108 @@ export async function POST(req: Request) {
         mediaCaption: mediaCaption || null,
       },
     });
+
+    // 11.1. Verificar se a conversa já está encerrada (triagem concluída)
+    // Se existir alguma mensagem anterior da IA contendo o resumo da solicitação, ignoramos silenciosamente
+    const summaryMessage = await prisma.message.findFirst({
+      where: {
+        conversationId: conversation.id,
+        role: "model",
+        OR: [
+          { content: { contains: "Resumo da Solicitação" } },
+          { content: { contains: "resumo da solicitação" } },
+          { content: { contains: "resumo da solicitacao" } },
+          { content: { contains: "📋 Resumo" } },
+          { content: { contains: "📋 resumo" } }
+        ]
+      }
+    });
+
+    if (summaryMessage) {
+      console.log(`[Webhook] Conversa com +${phone} já possui triagem finalizada. Nova mensagem salva no banco silenciosamente (sem resposta).`);
+      return NextResponse.json({ ok: true, ignored: "conversa_encerrada_triagem_concluida" });
+    }
+
+    // 11.2. Verificar Horário de Atendimento (Schedule)
+    if (config.scheduleEnabled) {
+      const timezone = (config as any).scheduleTimezone || "America/Sao_Paulo";
+      
+      // Obter data/hora atual no timezone configurado
+      let nowInTz: Date;
+      try {
+        const options = { timeZone: timezone, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", hour12: false } as const;
+        const formatter = new Intl.DateTimeFormat("en-US", options);
+        const parts = formatter.formatToParts(new Date());
+        
+        const getVal = (type: string) => parts.find(p => p.type === type)!.value;
+        const year = getVal("year");
+        const month = getVal("month");
+        const day = getVal("day");
+        const hour = getVal("hour");
+        const minute = getVal("minute");
+        const second = getVal("second");
+        
+        nowInTz = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+      } catch (err) {
+        console.error("[Webhook] Erro ao computar timezone, usando local:", err);
+        nowInTz = new Date();
+      }
+
+      const currentDay = nowInTz.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+      const currentHours = nowInTz.getHours();
+      const currentMinutes = nowInTz.getMinutes();
+      const currentTimeMinutes = currentHours * 60 + currentMinutes;
+
+      const mode = (config as any).scheduleMode || "normal";
+
+      if (mode === "plantao") {
+        // Modo Plantão Inteligente: A Lis só pode responder mensagens de segunda a sexta, a partir das 12:00
+        const isWeekday = currentDay >= 1 && currentDay <= 5;
+        const isTimeAuthorized = currentTimeMinutes >= 12 * 60; // 12h em diante
+
+        if (!isWeekday || !isTimeAuthorized) {
+          console.log(`[Webhook] Silenciador Plantão Inteligente: Fora do período autorizado (segunda a sexta a partir das 12h). Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}. Mensagem salva no histórico, IA silenciosa.`);
+          return NextResponse.json({ ok: true, ignored: "plantao_inteligente_fora_do_periodo_autorizado" });
+        }
+      } else {
+        // Modo Comercial Tradicional
+        let allowedDays: number[] = [1, 2, 3, 4, 5];
+        try {
+          allowedDays = JSON.parse((config as any).scheduleDays || "[1,2,3,4,5]");
+        } catch (e) {
+          console.error("[Webhook] Erro ao parsear scheduleDays:", e);
+        }
+
+        let startMinutes = 8 * 60; // 08:00
+        const startParts = ((config as any).scheduleStartTime || "08:00").split(":");
+        if (startParts.length === 2) {
+          startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+        }
+
+        let endMinutes = 18 * 60; // 18:00
+        const endParts = ((config as any).scheduleEndTime || "18:00").split(":");
+        if (endParts.length === 2) {
+          endMinutes = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
+        }
+
+        const isDayAllowed = allowedDays.includes(currentDay);
+        const isTimeAllowed = currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
+
+        if (!isDayAllowed || !isTimeAllowed) {
+          console.log(`[Webhook] Fora do expediente comercial. Enviando mensagem de ausência e salvando histórico. Dia: ${currentDay}, Hora: ${currentHours}:${currentMinutes}`);
+          if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
+            await sendWhatsAppMessage(
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              (config as any).scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"
+            );
+          }
+          return NextResponse.json({ ok: true, ignored: "fora_de_horario" });
+        }
+      }
+    }
 
     // 12. Buscar histórico para contexto
     const historyLimit = config.historyLimit || 10;

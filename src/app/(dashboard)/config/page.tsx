@@ -1400,7 +1400,7 @@ export default function ConfigPage() {
                           )}
                         </div>
                         <span className="text-[11px] text-[var(--text-3)] leading-relaxed">
-                          A Liz atende noites, almoços e fins de semana. Ela silencia totalmente no expediente comercial para que humanos atendam.
+                          A Liz atende de segunda a sexta a partir das 12:00. Ela silencia no expediente da manhã e nos finais de semana para que humanos respondam.
                         </span>
                       </button>
                     </div>
@@ -1506,61 +1506,42 @@ export default function ConfigPage() {
                   )}
 
                   {/* Configurações do Modo Plantão */}
+                  {/* Configurações do Modo Plantão */}
                   {config.scheduleMode === "plantao" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[var(--border)] animate-fade-up">
-                      {/* Inputs das Janelas de Silêncio */}
+                      {/* Descritivo de Regras */}
                       <div className="space-y-4">
                         <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-2)] block">
-                          Janelas de Silêncio (Expediente dos Humanos)
+                          Regras de Operação do Plantão
                         </span>
+                        
+                        <p className="text-xs text-[var(--text-3)] leading-relaxed">
+                          No Modo Plantão Inteligente, a Liz atua em regime pós-expediente para adiantar novas solicitações de clientes e qualificar contatos, sem conflitar com o atendimento humano de sua equipe.
+                        </p>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Manhã - Início</label>
-                            <input
-                              type="time"
-                              value={config.schedulePlantaoStart1 || "07:30"}
-                              onChange={(e) => updateField("schedulePlantaoStart1", e.target.value)}
-                              className="field-input text-xs"
-                              required
-                            />
+                        <div className="space-y-3 pt-2">
+                          <div className="p-3.5 rounded-xl border border-[var(--border)] bg-[#090914] flex gap-3">
+                            <span className="text-base shrink-0">🕒</span>
+                            <div>
+                              <strong className="text-xs text-[var(--text-1)] block">Período de Atendimento Autorizado:</strong>
+                              <span className="text-[11px] text-[var(--text-3)] leading-normal mt-0.5 block">
+                                Segunda a sexta-feira: a partir das <strong>12:00</strong>.
+                              </span>
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Manhã - Fim</label>
-                            <input
-                              type="time"
-                              value={config.schedulePlantaoEnd1 || "12:00"}
-                              onChange={(e) => updateField("schedulePlantaoEnd1", e.target.value)}
-                              className="field-input text-xs"
-                              required
-                            />
+
+                          <div className="p-3.5 rounded-xl border border-[var(--border)] bg-[#090914] flex gap-3">
+                            <span className="text-base shrink-0">🌅</span>
+                            <div>
+                              <strong className="text-xs text-[var(--text-1)] block">Período Comercial Humano:</strong>
+                              <span className="text-[11px] text-[var(--text-3)] leading-normal mt-0.5 block">
+                                Segunda a sexta: das <strong>07:30 às 12:00</strong> (Lis silenciosa para que humanos respondam).
+                              </span>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Tarde - Início</label>
-                            <input
-                              type="time"
-                              value={config.schedulePlantaoStart2 || "13:00"}
-                              onChange={(e) => updateField("schedulePlantaoStart2", e.target.value)}
-                              className="field-input text-xs"
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[11px] font-semibold text-[var(--text-3)]">Silêncio Tarde - Fim</label>
-                            <input
-                              type="time"
-                              value={config.schedulePlantaoEnd2 || "17:30"}
-                              onChange={(e) => updateField("schedulePlantaoEnd2", e.target.value)}
-                              className="field-input text-xs"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
+                        <div className="space-y-2 pt-2">
                           <label className="text-xs font-semibold text-[var(--text-2)]">Fuso Horário (Timezone)</label>
                           <select
                             value={config.scheduleTimezone}
@@ -1587,41 +1568,41 @@ export default function ConfigPage() {
 
                         <div className="space-y-3.5 text-xs text-[var(--text-2)]">
                           <div className="flex items-start gap-2.5">
-                            <span className="text-base shrink-0">🌙</span>
+                            <span className="text-base shrink-0">🤫</span>
                             <div>
-                              <strong className="text-[var(--text-1)] block text-xs">Pós-Horário e Noites:</strong>
+                              <strong className="text-[var(--text-1)] block text-xs">Silêncio Inteligente aos Fins de Semana:</strong>
                               <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
-                                Segunda a sexta: das <strong className="text-[var(--text-2)]">{config.schedulePlantaoEnd2 || "17:30"}</strong> do dia até às <strong className="text-[var(--text-2)]">{config.schedulePlantaoStart1 || "07:30"}</strong> da manhã seguinte.
+                                Sábado e Domingo inteiros: Liz fica totalmente <strong>silenciosa</strong> para que contatos fiquem intactos aguardando a equipe humana.
                               </span>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-2.5">
-                            <span className="text-base shrink-0">🍕</span>
+                            <span className="text-base shrink-0">💾</span>
                             <div>
-                              <strong className="text-[var(--text-1)] block text-xs">Intervalo de Almoço:</strong>
+                              <strong className="text-[var(--text-1)] block text-xs">Armazenamento em Tempo Real (Learning Mode):</strong>
                               <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
-                                Segunda a sexta: das <strong className="text-[var(--text-2)]">{config.schedulePlantaoEnd1 || "12:00"}</strong> às <strong className="text-[var(--text-2)]">{config.schedulePlantaoStart2 || "13:00"}</strong>.
+                                Mesmo quando está silenciosa (manhãs e fins de semana), todas as mensagens recebidas são <strong>salvas no histórico do cliente</strong> para dar contexto completo.
                               </span>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-2.5">
-                            <span className="text-base shrink-0">🏖️</span>
+                            <span className="text-base shrink-0">📋</span>
                             <div>
-                              <strong className="text-[var(--text-1)] block text-xs">Finais de Semana:</strong>
+                              <strong className="text-[var(--text-1)] block text-xs">Silêncio Pós-Triagem:</strong>
                               <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
-                                Sábado e Domingo inteiros (atendimento ininterrupto 24 horas por dia).
+                                Assim que a triagem é concluída (<strong>Resumo da Solicitação</strong> enviado), a Liz encerra o atendimento e não responde a novas mensagens para priorizar o fluxo humano.
                               </span>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-2.5 border-t border-[var(--border)] pt-3 mt-1">
-                            <span className="text-base shrink-0">🤫</span>
+                            <span className="text-base shrink-0">🧠</span>
                             <div>
-                              <strong className="text-purple-400 block text-xs">Silenciador Ativo (Humanos Atendendo):</strong>
+                              <strong className="text-purple-400 block text-xs">Aprendizado Operacional:</strong>
                               <span className="text-[var(--text-3)] text-[11px] leading-normal block mt-0.5">
-                                A Liz ignorará silenciosamente mensagens recebidas de segunda a sexta entre <strong className="text-[var(--text-2)]">{config.schedulePlantaoStart1 || "07:30"}-{config.schedulePlantaoEnd1 || "12:00"}</strong> e <strong className="text(--text-2)">{config.schedulePlantaoStart2 || "13:00"}-{config.schedulePlantaoEnd2 || "17:30"}</strong> para que sua equipe atenda sem duplicidade.
+                                A Liz analisa as interações em tempo real para gerar relatórios diários de comportamento dos clientes e sugestões de prompts de sistema otimizados.
                               </span>
                             </div>
                           </div>

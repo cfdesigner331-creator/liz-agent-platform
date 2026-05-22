@@ -142,8 +142,7 @@ export async function transcribeAudioWithGemini(
     return transcription;
   } catch (err: any) {
     console.error("[Media] Erro ao transcrever áudio com Gemini:", err.message);
-    // Retorna erro legível mas não quebra o fluxo
-    return `[Áudio recebido - erro na transcrição: ${err.message?.substring(0, 60)}]`;
+    throw err;
   }
 }
 
@@ -178,7 +177,7 @@ export async function analyzeImageWithGemini(
     return response.text?.trim() || "[Imagem não pôde ser analisada]";
   } catch (err: any) {
     console.error("[Media] Erro ao analisar imagem com Gemini:", err.message);
-    return "[Erro ao analisar imagem]";
+    throw err;
   }
 }
 
@@ -202,7 +201,7 @@ export async function analyzeDocumentWithGemini(
             {
               text: `Analise este documento chamado "${title || "documento"}" e extraia as informações mais importantes em português. Informe o tipo de documento, dados principais e qualquer informação relevante para um atendimento comercial.`,
             },
-            { inlineData: { mimeType: cleanMime, data: base64 } },
+            { inlineData: { cleanMime, data: base64 } },
           ],
         },
       ],
@@ -211,7 +210,7 @@ export async function analyzeDocumentWithGemini(
     return response.text?.trim() || "[Documento não pôde ser analisado]";
   } catch (err: any) {
     console.error("[Media] Erro ao analisar documento com Gemini:", err.message);
-    return "[Erro ao analisar documento]";
+    throw err;
   }
 }
 
@@ -535,32 +534,52 @@ export async function transcribeAudio(
   }
 ): Promise<string> {
   const provider = config.transcriptionProvider || "gemini";
+  let lastError: Error | null = null;
 
   if (provider === "openai") {
+    // OpenAI Primeiro
     if (config.openaiApiKey) {
       try {
         return await transcribeAudioWithOpenAI(base64, mimetype, config.openaiApiKey);
       } catch (err: any) {
         console.warn("[Media] Falha na transcrição com OpenAI Whisper, tentando fallback para Gemini...", err.message);
-        if (config.geminiApiKey) {
-          return await transcribeAudioWithGemini(base64, mimetype, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
-        }
+        lastError = err;
+      }
+    }
+    // Fallback para Gemini
+    if (config.geminiApiKey) {
+      try {
+        return await transcribeAudioWithGemini(base64, mimetype, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+      } catch (err: any) {
+        console.error("[Media] Falha no fallback do Gemini na transcrição:", err.message);
+        lastError = err;
       }
     }
   } else {
+    // Gemini Primeiro
     if (config.geminiApiKey) {
       try {
         return await transcribeAudioWithGemini(base64, mimetype, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
       } catch (err: any) {
         console.warn("[Media] Falha na transcrição com Gemini, tentando fallback para OpenAI Whisper...", err.message);
-        if (config.openaiApiKey) {
-          return await transcribeAudioWithOpenAI(base64, mimetype, config.openaiApiKey);
-        }
+        lastError = err;
+      }
+    }
+    // Fallback para OpenAI
+    if (config.openaiApiKey) {
+      try {
+        return await transcribeAudioWithOpenAI(base64, mimetype, config.openaiApiKey);
+      } catch (err: any) {
+        console.error("[Media] Falha no fallback do OpenAI Whisper na transcrição:", err.message);
+        lastError = err;
       }
     }
   }
 
-  return "[Áudio recebido - sem provedor de transcrição disponível ou credenciais inválidas]";
+  // Se chegou aqui, ambos falharam ou não havia chaves configuradas
+  const details = lastError ? `: ${lastError.message}` : " - Sem provedores de transcrição configurados/válidos";
+  console.error(`[Media] Erro total na transcrição de áudio${details}`);
+  return `[Áudio recebido - erro na transcrição${lastError ? ': ' + lastError.message.substring(0, 100) : ''}]`;
 }
 
 // ─── Orquestrador Híbrido Resiliente: Análise de Imagem ─────────────────────
@@ -577,32 +596,51 @@ export async function analyzeImage(
   }
 ): Promise<string> {
   const provider = config.visionProvider || "gemini";
+  let lastError: Error | null = null;
 
   if (provider === "openai") {
+    // OpenAI Primeiro
     if (config.openaiApiKey) {
       try {
         return await analyzeImageWithOpenAI(base64, mimetype, caption, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
       } catch (err: any) {
         console.warn("[Media] Falha na análise de imagem com OpenAI, tentando fallback para Gemini...", err.message);
-        if (config.geminiApiKey) {
-          return await analyzeImageWithGemini(base64, mimetype, caption, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
-        }
+        lastError = err;
+      }
+    }
+    // Fallback para Gemini
+    if (config.geminiApiKey) {
+      try {
+        return await analyzeImageWithGemini(base64, mimetype, caption, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+      } catch (err: any) {
+        console.error("[Media] Falha no fallback do Gemini na análise de imagem:", err.message);
+        lastError = err;
       }
     }
   } else {
+    // Gemini Primeiro
     if (config.geminiApiKey) {
       try {
         return await analyzeImageWithGemini(base64, mimetype, caption, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
       } catch (err: any) {
         console.warn("[Media] Falha na análise de imagem com Gemini, tentando fallback para OpenAI...", err.message);
-        if (config.openaiApiKey) {
-          return await analyzeImageWithOpenAI(base64, mimetype, caption, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
-        }
+        lastError = err;
+      }
+    }
+    // Fallback para OpenAI
+    if (config.openaiApiKey) {
+      try {
+        return await analyzeImageWithOpenAI(base64, mimetype, caption, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
+      } catch (err: any) {
+        console.error("[Media] Falha no fallback do OpenAI na análise de imagem:", err.message);
+        lastError = err;
       }
     }
   }
 
-  return "[Imagem recebida - sem provedor de visão disponível ou credenciais inválidas]";
+  const details = lastError ? `: ${lastError.message}` : " - Sem provedores de visão configurados/válidos";
+  console.error(`[Media] Erro total na análise de imagem${details}`);
+  return `[Imagem recebida - erro na análise${lastError ? ': ' + lastError.message.substring(0, 100) : ''}]`;
 }
 
 // ─── Orquestrador Híbrido Resiliente: Análise de Documento ──────────────────
@@ -619,45 +657,71 @@ export async function analyzeDocument(
   }
 ): Promise<string> {
   const provider = config.visionProvider || "gemini";
+  let lastError: Error | null = null;
+  const isPdf = mimetype.toLowerCase().includes("pdf");
+  const isImage = mimetype.toLowerCase().includes("image") || mimetype.toLowerCase().includes("png") || mimetype.toLowerCase().includes("jpeg");
 
   if (provider === "openai") {
     // Se for PDF, o Gemini é absurdamente melhor. Tenta Gemini primeiro se houver chave.
-    const isPdf = mimetype.toLowerCase().includes("pdf");
     if (isPdf && config.geminiApiKey) {
       try {
         return await analyzeDocumentWithGemini(base64, mimetype, title, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
       } catch (err: any) {
-        console.warn("[Media] Falha ao ler PDF com Gemini, tentando fallback de imagem se aplicável...", err.message);
+        console.warn("[Media] Falha ao ler PDF com Gemini no primeiro fluxo, tentando fallback...", err.message);
+        lastError = err;
       }
     }
 
+    // OpenAI principal
     if (config.openaiApiKey) {
       try {
-        const isImage = mimetype.toLowerCase().includes("image") || mimetype.toLowerCase().includes("png") || mimetype.toLowerCase().includes("jpeg");
         if (isImage) {
           return await analyzeImageWithOpenAI(base64, mimetype, `Documento: ${title}`, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
         }
-        return `[Documento recebido: ${title} - leitura direta pelo OpenAI indisponível sem Gemini]`;
+        // Se não for imagem (ex: pdf) e o Gemini já falhou/não foi usado, OpenAI não consegue analisar diretamente
+        if (!isPdf) {
+          return `[Documento recebido: ${title} - leitura direta pelo OpenAI indisponível sem Gemini]`;
+        }
       } catch (err: any) {
         console.warn("[Media] Falha na análise com OpenAI...", err.message);
+        lastError = err;
+      }
+    }
+
+    // Fallback para Gemini (caso não tenha sido executado acima para PDF, ou para imagens/outros docs)
+    if (config.geminiApiKey && (!isPdf || lastError)) {
+      try {
+        return await analyzeDocumentWithGemini(base64, mimetype, title, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
+      } catch (err: any) {
+        console.error("[Media] Falha no fallback do Gemini na análise de documento:", err.message);
+        lastError = err;
       }
     }
   } else {
-    // Gemini first
+    // Gemini Primeiro
     if (config.geminiApiKey) {
       try {
         return await analyzeDocumentWithGemini(base64, mimetype, title, config.geminiApiKey, config.geminiModel || "gemini-2.5-flash");
       } catch (err: any) {
         console.warn("[Media] Falha na análise do Gemini, tentando fallback para OpenAI...", err.message);
-        if (config.openaiApiKey) {
-          const isImage = mimetype.toLowerCase().includes("image") || mimetype.toLowerCase().includes("png") || mimetype.toLowerCase().includes("jpeg");
-          if (isImage) {
-            return await analyzeImageWithOpenAI(base64, mimetype, `Documento: ${title}`, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
-          }
+        lastError = err;
+      }
+    }
+
+    // Fallback para OpenAI
+    if (config.openaiApiKey) {
+      try {
+        if (isImage) {
+          return await analyzeImageWithOpenAI(base64, mimetype, `Documento: ${title}`, config.openaiApiKey, config.openaiModel || "gpt-4o-mini");
         }
+      } catch (err: any) {
+        console.error("[Media] Falha no fallback do OpenAI na análise de documento:", err.message);
+        lastError = err;
       }
     }
   }
 
-  return "[Documento recebido - sem provedor de análise de documento disponível ou credenciais inválidas]";
+  const details = lastError ? `: ${lastError.message}` : " - Sem provedores de análise de documento configurados/válidos";
+  console.error(`[Media] Erro total na análise de documento${details}`);
+  return `[Documento recebido - erro na análise${lastError ? ': ' + lastError.message.substring(0, 100) : ''}]`;
 }

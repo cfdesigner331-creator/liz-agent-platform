@@ -339,22 +339,104 @@ export async function POST(req: Request) {
         `\n\n[CONTEXTO DE MÍDIA — ${mediaLabel.toUpperCase()} RECEBIDA]\n${mediaCaption}\n[FIM DO CONTEXTO]`;
     }
 
-    // 14. Gerar resposta de texto com IA
-    const aiResult = await generateResponse(
-      chatHistory,
-      systemPromptWithMedia,
-      config.temperature,
-      config.maxTokens,
-      {
-        aiProvider: config.aiProvider,
-        openaiApiKey: config.openaiApiKey,
-        openaiModel: config.openaiModel,
-        groqApiKey: config.groqApiKey,
-        groqModel: config.groqModel,
-        geminiApiKey: config.geminiApiKey,
-        geminiModel: config.geminiModel,
+    // 14. Gerar resposta de texto com IA (com fallback resiliente para evitar travamento)
+    let aiResult: { content: string; tokens: number } | null = null;
+    let usedProvider = config.aiProvider || "openai";
+
+    try {
+      aiResult = await generateResponse(
+        chatHistory,
+        systemPromptWithMedia,
+        config.temperature,
+        config.maxTokens,
+        {
+          aiProvider: config.aiProvider,
+          openaiApiKey: config.openaiApiKey,
+          openaiModel: config.openaiModel,
+          groqApiKey: config.groqApiKey,
+          groqModel: config.groqModel,
+          geminiApiKey: config.geminiApiKey,
+          geminiModel: config.geminiModel,
+        }
+      );
+    } catch (firstErr: any) {
+      console.warn(`[Webhook] Falha no provedor principal (${config.aiProvider}):`, firstErr.message);
+
+      // Tentar fallback inteligente para outros provedores se o principal falhar
+      if (config.aiProvider === "gemini") {
+        if (config.groqApiKey && config.groqApiKey.trim() !== "") {
+          console.log("[Webhook] Tentando fallback resiliente para Groq...");
+          try {
+            aiResult = await generateResponse(
+              chatHistory,
+              systemPromptWithMedia,
+              config.temperature,
+              config.maxTokens,
+              {
+                aiProvider: "groq",
+                groqApiKey: config.groqApiKey,
+                groqModel: config.groqModel || "llama-3.3-70b-versatile",
+              }
+            );
+            usedProvider = "groq";
+            console.log("[Webhook] Fallback para Groq funcionou com sucesso!");
+          } catch (groqErr: any) {
+            console.error("[Webhook] Falha no fallback para Groq:", groqErr.message);
+          }
+        }
+
+        if (!aiResult && config.openaiApiKey && config.openaiApiKey.trim() !== "") {
+          console.log("[Webhook] Tentando fallback resiliente para OpenAI...");
+          try {
+            aiResult = await generateResponse(
+              chatHistory,
+              systemPromptWithMedia,
+              config.temperature,
+              config.maxTokens,
+              {
+                aiProvider: "openai",
+                openaiApiKey: config.openaiApiKey,
+                openaiModel: config.openaiModel || "gpt-4.1-mini",
+              }
+            );
+            usedProvider = "openai";
+            console.log("[Webhook] Fallback para OpenAI funcionou com sucesso!");
+          } catch (openaiErr: any) {
+            console.error("[Webhook] Falha no fallback para OpenAI:", openaiErr.message);
+          }
+        }
+      } else if (config.aiProvider === "groq") {
+        if (config.openaiApiKey && config.openaiApiKey.trim() !== "") {
+          console.log("[Webhook] Tentando fallback resiliente para OpenAI...");
+          try {
+            aiResult = await generateResponse(
+              chatHistory,
+              systemPromptWithMedia,
+              config.temperature,
+              config.maxTokens,
+              {
+                aiProvider: "openai",
+                openaiApiKey: config.openaiApiKey,
+                openaiModel: config.openaiModel || "gpt-4.1-mini",
+              }
+            );
+            usedProvider = "openai";
+            console.log("[Webhook] Fallback para OpenAI funcionou com sucesso!");
+          } catch (openaiErr: any) {
+            console.error("[Webhook] Falha no fallback para OpenAI:", openaiErr.message);
+          }
+        }
       }
-    );
+
+      // Se nenhum provedor funcionou ou não há chaves de fallback, usa resposta amigável padrão
+      if (!aiResult) {
+        console.warn("[Webhook] Todos os provedores de IA disponíveis falharam. Usando resposta amigável de fallback.");
+        aiResult = {
+          content: "Olá! Desculpe o transtorno, mas meu sistema de inteligência artificial está passando por uma oscilação temporária ou manutenção rápida. Por favor, tente enviar sua mensagem novamente em alguns instantes. Agradeço sua paciência! 🙏",
+          tokens: 0
+        };
+      }
+    }
 
     // 15. Salvar resposta da IA
     await prisma.message.create({

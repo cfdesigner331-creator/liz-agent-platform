@@ -104,3 +104,78 @@ export async function sendWhatsAppAudio(
   }
 }
 
+/**
+ * Altera a presença da Liz no chat (ex: 'composing' ou 'recording')
+ */
+export async function sendWhatsAppPresence(
+  evolutionUrl: string,
+  evolutionApiKey: string,
+  instanceId: string,
+  phone: string,
+  presence: "composing" | "recording" | "paused"
+): Promise<void> {
+  if (!evolutionUrl || !evolutionApiKey || !instanceId) {
+    return;
+  }
+
+  const cleanUrl = (evolutionUrl || "").trim().replace(/\/$/, "");
+  const url = `${cleanUrl}/chat/sendPresence/${instanceId.trim()}`;
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": evolutionApiKey.trim(),
+      },
+      body: JSON.stringify({
+        number: phone,
+        presence: presence,
+      }),
+    });
+  } catch (err: any) {
+    console.error(`[Evolution API Error] Erro ao enviar presença (${presence}) para +${phone}:`, err.message);
+  }
+}
+
+/**
+ * Marca as mensagens recebidas de um determinado cliente como lidas
+ */
+export async function markWhatsAppMessageAsRead(
+  evolutionUrl: string,
+  evolutionApiKey: string,
+  instanceId: string,
+  remoteJid: string,
+  messageId: string
+): Promise<void> {
+  if (!evolutionUrl || !evolutionApiKey || !instanceId) {
+    return;
+  }
+
+  const cleanUrl = (evolutionUrl || "").trim().replace(/\/$/, "");
+  const url = `${cleanUrl}/chat/markMessageAsRead/${instanceId.trim()}`;
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": evolutionApiKey.trim(),
+      },
+      body: JSON.stringify({
+        readMessages: [
+          {
+            remoteJid: remoteJid,
+            fromMe: false,
+            id: messageId,
+          },
+        ],
+      }),
+    });
+  } catch (err: any) {
+    console.error(`[Evolution API Error] Erro ao marcar mensagem ${messageId} como lida para +${remoteJid}:`, err.message);
+  }
+}
+
+
+

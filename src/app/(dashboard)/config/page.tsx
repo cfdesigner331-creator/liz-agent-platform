@@ -23,6 +23,9 @@ interface AgentConfig {
   geminiModel: string;
   audioResponseMode: string;
   ttsVoice: string;
+  ttsProvider: string;
+  cartesiaApiKey: string;
+  cartesiaVoiceId: string;
   scheduleEnabled: boolean;
   scheduleTimezone: string;
   scheduleDays: string;
@@ -57,6 +60,9 @@ export default function ConfigPage() {
     geminiModel: "gemini-2.5-flash-lite",
     audioResponseMode: "on_audio",
     ttsVoice: "Kore",
+    ttsProvider: "gemini",
+    cartesiaApiKey: "sk_car_3yj7jJ1y5HpBhDNRGfBvHG",
+    cartesiaVoiceId: "a0e9987c-1f5c-43f1-a675-5841029f9dbe",
     scheduleEnabled: false,
     scheduleTimezone: "America/Sao_Paulo",
     scheduleDays: "[1,2,3,4,5]",
@@ -78,6 +84,7 @@ export default function ConfigPage() {
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [showGroqKey, setShowGroqKey] = useState(false);
   const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [showCartesiaKey, setShowCartesiaKey] = useState(false);
   const [showEvoKey, setShowEvoKey] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -669,6 +676,55 @@ export default function ConfigPage() {
         {/* TAB 4: VOICE & MEDIA */}
         {activeTab === "voice" && (
           <div className="space-y-6 animate-fade-up">
+            {/* Provedor de Síntese de Voz */}
+            <div className="card space-y-6">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                <i className="fa-solid fa-server text-purple-400 text-xs"></i>
+                Provedor de Síntese de Voz
+              </h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Escolha o motor de conversão de texto para fala (TTS). A Cartesia AI oferece vozes de altíssimo realismo e naturalidade (emocionais), enquanto o Google Gemini TTS fornece uma síntese eficiente integrada.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  {
+                    value: "gemini",
+                    label: "Google Gemini TTS",
+                    icon: "fa-solid fa-wand-magic-sparkles text-purple-400",
+                    desc: "Vozes sintéticas padrão integradas diretamente no Gemini.",
+                  },
+                  {
+                    value: "cartesia",
+                    label: "Cartesia AI (Vozes Ultra-Realistas)",
+                    icon: "fa-solid fa-sparkles text-purple-400",
+                    desc: "Vozes hiper-realistas com emoção e entonação natural humana.",
+                  },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => updateField("ttsProvider", opt.value)}
+                    className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-2 ${
+                      config.ttsProvider === opt.value
+                        ? "bg-[rgba(168,85,247,0.08)] border-[rgba(168,85,247,0.4)] text-[var(--text-1)]"
+                        : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)] text-[var(--text-2)]"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-bold text-sm flex items-center gap-2 text-[var(--text-1)]">
+                        <i className={`${opt.icon} text-xs`}></i>
+                        {opt.label}
+                      </span>
+                      {config.ttsProvider === opt.value && (
+                        <i className="fa-solid fa-circle-check text-purple-400 text-sm"></i>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[var(--text-3)] leading-relaxed">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Audio Response Mode */}
             <div className="card space-y-6">
               <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
@@ -711,47 +767,149 @@ export default function ConfigPage() {
             </div>
 
             {/* TTS Voice Selection */}
-            <div className="card space-y-6">
-              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
-                <i className="fa-solid fa-waveform-lines text-purple-400 text-xs"></i>
-                Voz da Liz (Gemini TTS)
-              </h3>
-              <p className="text-xs text-[var(--text-2)] leading-relaxed">
-                Escolha a voz sintética usada pelo Gemini TTS. Cada voz possui timbre, entonação e ritmo únicos.
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { name: "Kore", desc: "Feminina, calorosa", recommended: true },
-                  { name: "Aoede", desc: "Feminina, expressiva" },
-                  { name: "Zephyr", desc: "Feminina, suave" },
-                  { name: "Leda", desc: "Feminina, clara" },
-                  { name: "Puck", desc: "Masculina, jovial" },
-                  { name: "Charon", desc: "Masculina, profunda" },
-                  { name: "Fenrir", desc: "Masculina, firme" },
-                  { name: "Orbit", desc: "Masculina, neutra" },
-                ].map((voice) => (
-                  <button
-                    key={voice.name}
-                    type="button"
-                    onClick={() => updateField("ttsVoice", voice.name)}
-                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1 relative ${
-                      config.ttsVoice === voice.name
-                        ? "bg-[rgba(168,85,247,0.1)] border-[rgba(168,85,247,0.4)] shadow-[0_0_12px_rgba(168,85,247,0.1)]"
-                        : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)]"
-                    }`}
-                  >
-                    {voice.recommended && (
-                      <span className="absolute top-1.5 right-1.5 text-[8px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.2)] border border-[rgba(168,85,247,0.3)] text-purple-400 font-bold">PADRÃO</span>
-                    )}
-                    <div className="flex items-center gap-1.5">
-                      <i className={`fa-solid fa-circle text-[6px] ${config.ttsVoice === voice.name ? "text-purple-400" : "text-[var(--text-3)]"}`}></i>
-                      <span className={`font-bold text-sm ${config.ttsVoice === voice.name ? "text-purple-300" : "text-[var(--text-1)]"}`}>{voice.name}</span>
-                    </div>
-                    <span className="text-[10px] text-[var(--text-3)]">{voice.desc}</span>
-                  </button>
-                ))}
+            {config.ttsProvider === "gemini" && (
+              <div className="card space-y-6">
+                <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                  <i className="fa-solid fa-waveform-lines text-purple-400 text-xs"></i>
+                  Voz da Liz (Gemini TTS)
+                </h3>
+                <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                  Escolha a voz sintética usada pelo Gemini TTS. Cada voz possui timbre, entonação e ritmo únicos.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { name: "Kore", desc: "Feminina, calorosa", recommended: true },
+                    { name: "Aoede", desc: "Feminina, expressiva" },
+                    { name: "Zephyr", desc: "Feminina, suave" },
+                    { name: "Leda", desc: "Feminina, clara" },
+                    { name: "Puck", desc: "Masculina, jovial" },
+                    { name: "Charon", desc: "Masculina, profunda" },
+                    { name: "Fenrir", desc: "Masculina, firme" },
+                    { name: "Orbit", desc: "Masculina, neutra" },
+                  ].map((voice) => (
+                    <button
+                      key={voice.name}
+                      type="button"
+                      onClick={() => updateField("ttsVoice", voice.name)}
+                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1 relative ${
+                        config.ttsVoice === voice.name
+                          ? "bg-[rgba(168,85,247,0.1)] border-[rgba(168,85,247,0.4)] shadow-[0_0_12px_rgba(168,85,247,0.1)]"
+                          : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)]"
+                      }`}
+                    >
+                      {voice.recommended && (
+                        <span className="absolute top-1.5 right-1.5 text-[8px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.2)] border border-[rgba(168,85,247,0.3)] text-purple-400 font-bold">PADRÃO</span>
+                      )}
+                      <div className="flex items-center gap-1.5">
+                        <i className={`fa-solid fa-circle text-[6px] ${config.ttsVoice === voice.name ? "text-purple-400" : "text-[var(--text-3)]"}`}></i>
+                        <span className={`font-bold text-sm ${config.ttsVoice === voice.name ? "text-purple-300" : "text-[var(--text-1)]"}`}>{voice.name}</span>
+                      </div>
+                      <span className="text-[10px] text-[var(--text-3)]">{voice.desc}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Cartesia TTS Configuration */}
+            {config.ttsProvider === "cartesia" && (
+              <div className="card space-y-6 animate-fade-up">
+                <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
+                  <i className="fa-solid fa-gears text-purple-400 text-xs"></i>
+                  Configurações da Cartesia AI
+                </h3>
+                <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                  Insira as credenciais de autenticação da Cartesia AI e selecione o ID de voz desejado.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                      <span>Cartesia API Key</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowCartesiaKey(!showCartesiaKey)}
+                        className="text-[10px] text-[var(--accent-text)] hover:underline"
+                      >
+                        {showCartesiaKey ? "Ocultar" : "Mostrar"}
+                      </button>
+                    </label>
+                    <input
+                      type={showCartesiaKey ? "text" : "password"}
+                      value={config.cartesiaApiKey}
+                      onChange={(e) => updateField("cartesiaApiKey", e.target.value)}
+                      className="field-input text-xs font-mono"
+                      placeholder="sk_car_..."
+                      required
+                    />
+                    <span className="text-[10px] text-[var(--text-3)]">
+                      Chave secreta obtida no console da Cartesia para cobrança e autorização.
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-[var(--text-2)]">
+                      ID de Voz Cartesia (UUID)
+                    </label>
+                    <input
+                      type="text"
+                      value={config.cartesiaVoiceId}
+                      onChange={(e) => updateField("cartesiaVoiceId", e.target.value)}
+                      className="field-input text-xs font-mono"
+                      placeholder="Ex: a0e9987c-1f5c-43f1-a675-5841029f9dbe"
+                      required
+                    />
+                    <span className="text-[10px] text-[var(--text-3)]">
+                      O identificador UUID único da voz que a Liz usará para falar.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Recomendação de Vozes Cartesia */}
+                <div className="space-y-3 pt-2">
+                  <label className="text-[11px] uppercase font-bold tracking-wider text-[var(--text-3)] block">
+                    Vozes em Português Recomendadas
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {[
+                      {
+                        name: "Barbra (Feminina Premium - Brasil)",
+                        id: "a0e9987c-1f5c-43f1-a675-5841029f9dbe",
+                        desc: "Voz suave, profissional e altamente cativante. Perfeita para atendimento.",
+                      },
+                      {
+                        name: "Pedro (Masculina Premium - Brasil)",
+                        id: "e40938b8-7a5b-4de0-aa46-816b607062a4",
+                        desc: "Voz firme, natural, com ritmo claro e excelente dicção para vendas.",
+                      },
+                    ].map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => updateField("cartesiaVoiceId", v.id)}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1 relative ${
+                          config.cartesiaVoiceId === v.id
+                            ? "bg-[rgba(168,85,247,0.1)] border-[rgba(168,85,247,0.4)] shadow-[0_0_12px_rgba(168,85,247,0.1)]"
+                            : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 justify-between">
+                          <span className={`font-bold text-xs ${config.cartesiaVoiceId === v.id ? "text-purple-300" : "text-[var(--text-1)]"}`}>
+                            {v.name}
+                          </span>
+                          {config.cartesiaVoiceId === v.id && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[rgba(168,85,247,0.2)] border border-[rgba(168,85,247,0.3)] text-purple-400 font-bold">ATRIBUÍDO</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-[var(--text-3)] leading-relaxed mt-0.5">{v.desc}</span>
+                        <code className="text-[9px] font-mono mt-1 text-purple-400/80 bg-[#14142b] py-0.5 px-1.5 rounded self-start truncate max-w-full">
+                          {v.id}
+                        </code>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Media Processing Info */}
             <div className="card border-[rgba(168,85,247,0.1)] bg-[rgba(13,13,28,0.4)] space-y-4">

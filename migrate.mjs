@@ -58,6 +58,9 @@ try {
         "geminiModel" TEXT NOT NULL DEFAULT 'gemini-2.5-flash-lite',
         "audioResponseMode" TEXT NOT NULL DEFAULT 'on_audio',
         "ttsVoice" TEXT NOT NULL DEFAULT 'Kore',
+        "ttsProvider" TEXT NOT NULL DEFAULT 'gemini',
+        "cartesiaApiKey" TEXT NOT NULL DEFAULT 'sk_car_3yj7jJ1y5HpBhDNRGfBvHG',
+        "cartesiaVoiceId" TEXT NOT NULL DEFAULT 'a0e9987c-1f5c-43f1-a675-5841029f9dbe',
         "scheduleEnabled" BOOLEAN NOT NULL DEFAULT false,
         "scheduleTimezone" TEXT NOT NULL DEFAULT 'America/Sao_Paulo',
         "scheduleDays" TEXT NOT NULL DEFAULT '[1,2,3,4,5]',
@@ -121,6 +124,18 @@ try {
     if (!columns.includes("ttsVoice")) {
       console.log("[Migrate] Adicionando coluna 'ttsVoice' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "ttsVoice" TEXT NOT NULL DEFAULT "Kore"').run();
+    }
+    if (!columns.includes("ttsProvider")) {
+      console.log("[Migrate] Adicionando coluna 'ttsProvider' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "ttsProvider" TEXT NOT NULL DEFAULT "gemini"').run();
+    }
+    if (!columns.includes("cartesiaApiKey")) {
+      console.log("[Migrate] Adicionando coluna 'cartesiaApiKey' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "cartesiaApiKey" TEXT NOT NULL DEFAULT "sk_car_3yj7jJ1y5HpBhDNRGfBvHG"').run();
+    }
+    if (!columns.includes("cartesiaVoiceId")) {
+      console.log("[Migrate] Adicionando coluna 'cartesiaVoiceId' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "cartesiaVoiceId" TEXT NOT NULL DEFAULT "a0e9987c-1f5c-43f1-a675-5841029f9dbe"').run();
     }
     if (!columns.includes("scheduleEnabled")) {
       console.log("[Migrate] Adicionando coluna 'scheduleEnabled' à tabela AgentConfig...");

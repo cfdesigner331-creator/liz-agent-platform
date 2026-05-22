@@ -109,11 +109,14 @@ export async function transcribeAudioWithGemini(
   const ai = new GoogleGenAI({ apiKey: geminiApiKey });
   const cleanMime = sanitizeMimetype(mimetype);
 
-  console.log(`[Media] Transcrevendo áudio | mime: ${cleanMime} | tamanho base64: ${base64.length} chars`);
+  // Forçar gemini-2.5-flash para transcrição de áudio, já que o flash-lite não é multimodal
+  const modelToUse = "gemini-2.5-flash";
+
+  console.log(`[Media] Transcrevendo áudio | mime: ${cleanMime} | modelo: ${modelToUse} | tamanho base64: ${base64.length} chars`);
 
   try {
     const response = await ai.models.generateContent({
-      model: geminiModel,
+      model: modelToUse,
       contents: [
         {
           parts: [
@@ -342,4 +345,91 @@ export function detectMediaType(messageContent: Record<string, any>): {
   }
 
   return { type: null, mimetype: "", caption: "", title: "", isPtt: false };
+}
+
+/**
+ * Geração de Voz realista usando a API Bytes do Cartesia AI
+ */
+export async function generateSpeechWithCartesia(
+  text: string,
+  apiKey: string,
+  voiceId = "a0e9987c-1f5c-43f1-a675-5841029f9dbe"
+): Promise<string | null> {
+  const safeText = text.substring(0, 4000);
+  console.log(`[Media] Gerando Voz Cartesia | voz: ${voiceId} | texto: "${safeText.substring(0, 60)}..."`);
+
+  try {
+    const response = await fetch("https://api.cartesia.ai/tts/bytes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cartesia-Version": "2024-06-10",
+        "X-API-Key": apiKey.trim(),
+      },
+      body: JSON.stringify({
+        transcript: safeText,
+        model_id: "sonic-multilingual",
+        voice: {
+          mode: "id",
+          id: voiceId.trim(),
+        },
+        output_format: {
+          container: "wav",
+          encoding: "pcm_s16le",
+          sample_rate: 24000,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Media] Erro Cartesia API (${response.status}): ${errorText}`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = Buffer.from(arrayBuffer);
+    
+    // Como o Cartesia com output_format container 'wav' já encapsula nativamente
+    // os headers RIFF/WAVE no buffer retornado, convertemos diretamente para base64.
+    return audioBuffer.toString("base64");
+  } catch (err: any) {
+    console.error("[Media] Falha ao gerar fala com Cartesia TTS:", err.message);
+    return null;
+  }
+}
+
+/**
+ * Orquestrador unificado para geração de áudios TTS
+ */
+export async function generateSpeech(
+  text: string,
+  config: {
+    ttsProvider?: string;
+    geminiApiKey?: string;
+    ttsVoice?: string;
+    cartesiaApiKey?: string;
+    cartesiaVoiceId?: string;
+  }
+): Promise<string | null> {
+  const provider = config.ttsProvider || "gemini";
+
+  if (provider === "cartesia") {
+    const apiKey = config.cartesiaApiKey || "sk_car_3yj7jJ1y5HpBhDNRGfBvHG";
+    const voiceId = config.cartesiaVoiceId || "a0e9987c-1f5c-43f1-a675-5841029f9dbe";
+    if (!apiKey) {
+      console.warn("[Media] Provedor de voz definido como Cartesia, mas chave de API está ausente.");
+      return null;
+    }
+    return generateSpeechWithCartesia(text, apiKey, voiceId);
+  } else {
+    // Gemini
+    const apiKey = config.geminiApiKey;
+    const voice = config.ttsVoice || "Kore";
+    if (!apiKey) {
+      console.warn("[Media] Provedor de voz definido como Gemini, mas chave de API do Gemini está ausente.");
+      return null;
+    }
+    return generateSpeechWithGemini(text, apiKey, voice);
+  }
 }

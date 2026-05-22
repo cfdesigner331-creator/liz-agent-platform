@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateResponse } from "@/lib/openai";
-import { sendWhatsAppMessage, sendWhatsAppAudio } from "@/lib/evolution";
+import {
+  sendWhatsAppMessage,
+  sendWhatsAppAudio,
+  sendWhatsAppPresence,
+  markWhatsAppMessageAsRead,
+} from "@/lib/evolution";
 import {
   detectMediaType,
   downloadMediaFromEvolution,
   transcribeAudioWithGemini,
   analyzeImageWithGemini,
   analyzeDocumentWithGemini,
-  generateSpeechWithGemini,
+  generateSpeech,
 } from "@/lib/media";
 
 // Cache estático de mensagens em processamento concorrente para desduplicação
@@ -211,6 +216,17 @@ export async function POST(req: Request) {
       }
     }
 
+    // Iniciar simulação de digitação imediata enquanto a IA processa o prompt e o histórico
+    if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
+      await sendWhatsAppPresence(
+        config.evolutionUrl,
+        config.evolutionApiKey,
+        config.instanceId,
+        remoteJid,
+        "composing"
+      );
+    }
+
     // 8. Se for mídia — baixar e processar com Gemini
     let mediaCaption = "";
     let detectedMediaType = mediaInfo.type;
@@ -364,12 +380,25 @@ export async function POST(req: Request) {
 
       let audioSent = false;
 
-      if (shouldSendAudio && config.geminiApiKey) {
+      // Se Cartesia estiver selecionado, não exige obrigatoriamente a geminiApiKey para TTS
+      const hasTtsCredentials = 
+        (config.ttsProvider === "cartesia" && config.cartesiaApiKey) ||
+        (config.ttsProvider !== "cartesia" && config.geminiApiKey);
+
+      if (shouldSendAudio && hasTtsCredentials) {
         try {
-          const audioBase64 = await generateSpeechWithGemini(
+          // Sinaliza "gravando áudio..." no status de presença do WhatsApp
+          await sendWhatsAppPresence(
+            config.evolutionUrl,
+            config.evolutionApiKey,
+            config.instanceId,
+            remoteJid,
+            "recording"
+          );
+
+          const audioBase64 = await generateSpeech(
             aiResult.content,
-            config.geminiApiKey,
-            (config as any).ttsVoice || "Kore"
+            config
           );
 
           if (audioBase64) {
@@ -382,9 +411,18 @@ export async function POST(req: Request) {
             );
             audioSent = true;
             console.log(`[Webhook] Resposta enviada como nota de voz para +${phone}`);
+
+            // Marcar mensagem do cliente como lida após o envio do áudio
+            await markWhatsAppMessageAsRead(
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              messageId
+            );
           }
         } catch (ttsErr: any) {
-          console.warn("[Webhook] Falha no TTS Gemini, fazendo fallback para texto:", ttsErr.message);
+          console.warn("[Webhook] Falha no TTS, fazendo fallback para texto:", ttsErr.message);
         }
       }
 
@@ -411,9 +449,23 @@ export async function POST(req: Request) {
         };
 
         const textChunks = splitResponseIntoParagraphs(aiResult.content);
-        console.log(`[Webhook] Enviando ${textChunks.length} mensagens parceladas.`);
+        console.log(`[Webhook] Enviando ${textChunks.length} mensagens parceladas com simulação de digitação.`);
         
         for (let i = 0; i < textChunks.length; i++) {
+          // 1. Sinaliza digitação no WhatsApp
+          await sendWhatsAppPresence(
+            config.evolutionUrl,
+            config.evolutionApiKey,
+            config.instanceId,
+            remoteJid,
+            "composing"
+          );
+
+          // 2. Delay proporcional de simulação de digitação (mínimo 1.5s, máximo 4.5s)
+          const typingMs = Math.min(4500, Math.max(1500, textChunks[i].length * 20));
+          await new Promise(resolve => setTimeout(resolve, typingMs));
+
+          // 3. Envia o fragmento de texto
           await sendWhatsAppMessage(
             config.evolutionUrl,
             config.evolutionApiKey,
@@ -421,10 +473,21 @@ export async function POST(req: Request) {
             remoteJid,
             textChunks[i]
           );
-          
+
+          // 4. Se for a primeira mensagem enviada do lote, marcar a mensagem do cliente como lida
+          if (i === 0) {
+            await markWhatsAppMessageAsRead(
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              messageId
+            );
+          }
+
+          // Pequeno silêncio de transição entre envios
           if (i < textChunks.length - 1) {
-            const delayMs = Math.min(3000, Math.max(1000, textChunks[i].length * 15));
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+            await new Promise(resolve => setTimeout(resolve, 800));
           }
         }
       }

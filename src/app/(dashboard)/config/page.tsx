@@ -41,6 +41,8 @@ interface AgentConfig {
   textTitle?: string;
   transcriptionProvider?: string;
   visionProvider?: string;
+  groqTranscriptionModel?: string;
+  groqVisionModel?: string;
 }
 
 export default function ConfigPage() {
@@ -80,8 +82,10 @@ export default function ConfigPage() {
     schedulePlantaoEnd2: "17:30",
     textTitleEnabled: false,
     textTitle: "Liz | Assistente Virtual",
-    transcriptionProvider: "gemini",
-    visionProvider: "gemini",
+    transcriptionProvider: "groq",
+    visionProvider: "groq",
+    groqTranscriptionModel: "whisper-large-v3-turbo",
+    groqVisionModel: "llama-3.2-11b-vision-preview",
   });
 
   const [loading, setLoading] = useState(true);
@@ -1137,25 +1141,59 @@ export default function ConfigPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Groq API Key */}
                     {((config.transcriptionProvider || "gemini") === "groq" || (config.visionProvider || "gemini") === "groq") && (
-                      <div className="space-y-2 animate-fade-up">
-                        <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
-                          <span>Groq API Key (Whisper / Vision)</span>
-                          <button
-                            type="button"
-                            onClick={() => setShowGroqKey(!showGroqKey)}
-                            className="text-[10px] text-[var(--accent-text)] hover:underline"
-                          >
-                            {showGroqKey ? "Ocultar" : "Mostrar"}
-                          </button>
-                        </label>
-                        <input
-                          type={showGroqKey ? "text" : "password"}
-                          value={config.groqApiKey || ""}
-                          onChange={(e) => updateField("groqApiKey", e.target.value)}
-                          className="field-input text-xs font-mono"
-                          placeholder="gsk_..."
-                        />
-                      </div>
+                      <>
+                        <div className="space-y-2 animate-fade-up">
+                          <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                            <span>Groq API Key (Whisper / Vision)</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowGroqKey(!showGroqKey)}
+                              className="text-[10px] text-[var(--accent-text)] hover:underline"
+                            >
+                              {showGroqKey ? "Ocultar" : "Mostrar"}
+                            </button>
+                          </label>
+                          <input
+                            type={showGroqKey ? "text" : "password"}
+                            value={config.groqApiKey || ""}
+                            onChange={(e) => updateField("groqApiKey", e.target.value)}
+                            className="field-input text-xs font-mono"
+                            placeholder="gsk_..."
+                          />
+                        </div>
+
+                        {/* Groq Transcription Model */}
+                        {(config.transcriptionProvider || "gemini") === "groq" && (
+                          <div className="space-y-2 animate-fade-up">
+                            <label className="text-xs font-semibold text-[var(--text-2)]">
+                              Modelo de Transcrição Groq
+                            </label>
+                            <input
+                              type="text"
+                              value={config.groqTranscriptionModel || ""}
+                              onChange={(e) => updateField("groqTranscriptionModel", e.target.value)}
+                              className="field-input text-xs font-mono"
+                              placeholder="whisper-large-v3-turbo"
+                            />
+                          </div>
+                        )}
+
+                        {/* Groq Vision Model */}
+                        {(config.visionProvider || "gemini") === "groq" && (
+                          <div className="space-y-2 animate-fade-up">
+                            <label className="text-xs font-semibold text-[var(--text-2)]">
+                              Modelo de Visão Groq
+                            </label>
+                            <input
+                              type="text"
+                              value={config.groqVisionModel || ""}
+                              onChange={(e) => updateField("groqVisionModel", e.target.value)}
+                              className="field-input text-xs font-mono"
+                              placeholder="llama-3.2-11b-vision-preview"
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
 
                     {/* OpenAI API Key */}

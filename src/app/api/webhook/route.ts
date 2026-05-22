@@ -232,7 +232,7 @@ export async function POST(req: Request) {
     let detectedMediaType = mediaInfo.type;
     let isAudioMessage = false;
 
-    if (mediaInfo.type && (config.geminiApiKey || config.openaiApiKey)) {
+    if (mediaInfo.type && (config.geminiApiKey || config.openaiApiKey || config.groqApiKey)) {
       console.log(`[Webhook] Mídia detectada: ${mediaInfo.type} (${mediaInfo.mimetype})`);
 
       const mediaData = await downloadMediaFromEvolution(

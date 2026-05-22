@@ -49,11 +49,13 @@ try {
         "historyLimit" INTEGER NOT NULL DEFAULT 10,
         "enabled" BOOLEAN NOT NULL DEFAULT true,
         "allowedPhones" TEXT NOT NULL DEFAULT '',
-        "aiProvider" TEXT NOT NULL DEFAULT 'openai',
+        "aiProvider" TEXT NOT NULL DEFAULT 'groq',
         "openaiApiKey" TEXT NOT NULL DEFAULT '',
         "openaiModel" TEXT NOT NULL DEFAULT 'gpt-4.1-mini',
         "groqApiKey" TEXT NOT NULL DEFAULT '',
         "groqModel" TEXT NOT NULL DEFAULT 'llama-3.3-70b-versatile',
+        "groqTranscriptionModel" TEXT NOT NULL DEFAULT 'whisper-large-v3-turbo',
+        "groqVisionModel" TEXT NOT NULL DEFAULT 'llama-3.2-11b-vision-preview',
         "geminiApiKey" TEXT NOT NULL DEFAULT '',
         "geminiModel" TEXT NOT NULL DEFAULT 'gemini-2.5-flash-lite',
         "audioResponseMode" TEXT NOT NULL DEFAULT 'on_audio',
@@ -74,8 +76,8 @@ try {
         "schedulePlantaoEnd2" TEXT NOT NULL DEFAULT '17:30',
         "textTitleEnabled" BOOLEAN NOT NULL DEFAULT false,
         "textTitle" TEXT NOT NULL DEFAULT 'Liz | Assistente Virtual',
-        "transcriptionProvider" TEXT NOT NULL DEFAULT 'gemini',
-        "visionProvider" TEXT NOT NULL DEFAULT 'gemini',
+        "transcriptionProvider" TEXT NOT NULL DEFAULT 'groq',
+        "visionProvider" TEXT NOT NULL DEFAULT 'groq',
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -195,11 +197,19 @@ try {
     }
     if (!columns.includes("transcriptionProvider")) {
       console.log("[Migrate] Adicionando coluna 'transcriptionProvider' à tabela AgentConfig...");
-      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "transcriptionProvider" TEXT NOT NULL DEFAULT "gemini"').run();
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "transcriptionProvider" TEXT NOT NULL DEFAULT "groq"').run();
     }
     if (!columns.includes("visionProvider")) {
       console.log("[Migrate] Adicionando coluna 'visionProvider' à tabela AgentConfig...");
-      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "visionProvider" TEXT NOT NULL DEFAULT "gemini"').run();
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "visionProvider" TEXT NOT NULL DEFAULT "groq"').run();
+    }
+    if (!columns.includes("groqTranscriptionModel")) {
+      console.log("[Migrate] Adicionando coluna 'groqTranscriptionModel' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "groqTranscriptionModel" TEXT NOT NULL DEFAULT "whisper-large-v3-turbo"').run();
+    }
+    if (!columns.includes("groqVisionModel")) {
+      console.log("[Migrate] Adicionando coluna 'groqVisionModel' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "groqVisionModel" TEXT NOT NULL DEFAULT "llama-3.2-11b-vision-preview"').run();
     }
 
     // Message table new columns

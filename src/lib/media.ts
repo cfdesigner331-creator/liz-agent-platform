@@ -616,6 +616,7 @@ export async function transcribeAudio(
     geminiModel?: string;
     openaiApiKey?: string;
     groqApiKey?: string;
+    groqTranscriptionModel?: string;
   }
 ): Promise<string> {
   const provider = config.transcriptionProvider || "gemini";
@@ -630,7 +631,7 @@ export async function transcribeAudio(
   for (const p of order) {
     if (p === "groq" && config.groqApiKey) {
       try {
-        return await transcribeAudioWithGroq(base64, mimetype, config.groqApiKey);
+        return await transcribeAudioWithGroq(base64, mimetype, config.groqApiKey, config.groqTranscriptionModel || "whisper-large-v3-turbo");
       } catch (err: any) {
         console.warn("[Media] Falha na transcrição com Groq Whisper, tentando fallback...", err.message);
         lastError = err;
@@ -670,6 +671,7 @@ export async function analyzeImage(
     openaiApiKey?: string;
     openaiModel?: string;
     groqApiKey?: string;
+    groqVisionModel?: string;
   }
 ): Promise<string> {
   const provider = config.visionProvider || "gemini";
@@ -684,7 +686,7 @@ export async function analyzeImage(
   for (const p of order) {
     if (p === "groq" && config.groqApiKey) {
       try {
-        return await analyzeImageWithGroq(base64, mimetype, caption, config.groqApiKey, "llama-3.2-11b-vision-preview");
+        return await analyzeImageWithGroq(base64, mimetype, caption, config.groqApiKey, config.groqVisionModel || "llama-3.2-11b-vision-preview");
       } catch (err: any) {
         console.warn("[Media] Falha na análise de imagem com Groq Vision, tentando fallback...", err.message);
         lastError = err;
@@ -723,6 +725,7 @@ export async function analyzeDocument(
     openaiApiKey?: string;
     openaiModel?: string;
     groqApiKey?: string;
+    groqVisionModel?: string;
   }
 ): Promise<string> {
   const provider = config.visionProvider || "gemini";
@@ -750,7 +753,7 @@ export async function analyzeDocument(
     for (const p of order) {
       if (p === "groq" && config.groqApiKey) {
         try {
-          return await analyzeImageWithGroq(base64, mimetype, `Documento: ${title}`, config.groqApiKey, "llama-3.2-11b-vision-preview");
+          return await analyzeImageWithGroq(base64, mimetype, `Documento: ${title}`, config.groqApiKey, config.groqVisionModel || "llama-3.2-11b-vision-preview");
         } catch (err: any) {
           console.warn("[Media] Falha na análise do documento imagem com Groq Vision, tentando fallback...", err.message);
           lastError = err;

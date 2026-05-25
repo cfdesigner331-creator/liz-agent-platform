@@ -26,7 +26,7 @@ export async function generateSuggestionsFromHistory(): Promise<string[]> {
     .map((msg) => `${msg.role === "user" ? "Cliente" : "Liz (IA)"}: ${msg.content}`)
     .join("\n");
 
-  const promptText = `Você é o Diretor de Aprendizado Operacional da Liz. Analise o histórico recente de interações e identifique padrões de comportamento dos clientes e dos atendentes humanos para auto-aprimorar o System Prompt da Liz.
+  const promptText = `Você é o Diretor de Aprendizado Operacional deste sistema de IA. Analise o histórico recente de interações e identifique padrões de comportamento dos clientes e dos atendentes humanos para auto-aprimorar o System Prompt da assistente configurada.
 
 ### 🎯 FOCO DA ANÁLISE:
 1. **COMO NOSSOS CLIENTES CONVERSAM**:
@@ -37,7 +37,7 @@ export async function generateSuggestionsFromHistory(): Promise<string[]> {
    - Qual o tom de voz e abordagem comercial que os atendentes humanos usam para engajar o cliente?
    - Quais soluções, explicações técnicas (sobre sublimação, tecidos, bordados, vetorização) e flexibilidades de negociação os atendentes utilizam que deram certo?
 3. **OPORTUNIDADES DE MELHORIA**:
-   - Como podemos atualizar as instruções de sistema para que a Liz converse de forma mais natural (alinhada à linguagem dos clientes) e use as mesmas estratégias comerciais de sucesso dos atendentes reais?
+   - Como podemos atualizar as instruções de sistema para que a assistente configurada converse de forma mais natural (alinhada à linguagem dos clientes) e use as mesmas estratégias comerciais de sucesso dos atendentes reais?
 
 Gere de 1 a 3 sugestões concretas, curtas e acionáveis de melhoria para o System Prompt da assistente.
 
@@ -125,7 +125,7 @@ export async function compileSuggestionsIntoPrompt(): Promise<string> {
 ${listText}
 
 Reescreva o System Prompt atual da assistente integrando todas essas melhorias e regras adicionais de forma perfeitamente fluida e harmoniosa.
-Mantenha rigorosamente toda a estrutura existente, regras de minutos/plantão, o tom e a persona da Liz, incorporando apenas as novas regras sugeridas nos tópicos correspondentes.
+Mantenha rigorosamente toda a estrutura existente, regras de minutos/plantão, o tom e a persona da assistente configurada, incorporando apenas as novas regras sugeridas nos tópicos correspondentes.
 Retorne APENAS o novo System Prompt completo atualizado, sem qualquer introdução, explicação ou tags markdown.
 
 PROMPT ATUAL:

@@ -65,25 +65,37 @@ export async function POST(req: Request) {
 
       messageId = message.id;
 
-      // Ignorar respostas próprias da IA
-      if (message.fromMe === true) {
-        return NextResponse.json({ ok: true, ignored: "mensagem_propria_ignorada" });
-      }
-
-      // Extração dinâmica do telefone
+      // Extração dinâmica e resiliente do telefone do cliente
+      let extractedPhone = "";
       if (body.contact?.number) {
-        phone = body.contact.number;
+        extractedPhone = body.contact.number;
       } else if (body.ticket?.contact?.number) {
-        phone = body.ticket.contact.number;
+        extractedPhone = body.ticket.contact.number;
       } else if (message.contact?.number) {
-        phone = message.contact.number;
-      } else if (body.contactId) {
-        phone = String(body.contactId);
-      } else if (message.contactId) {
-        phone = String(message.contactId);
+        extractedPhone = message.contact.number;
       }
 
-      phone = phone.replace(/[^0-9]/g, "");
+      // Se não encontrou ou se é muito curto (ID de 6 dígitos do CRM), tenta ler dos metadados brutos (raw.Info) do WhatsApp
+      if (!extractedPhone || extractedPhone.replace(/[^0-9]/g, "").length < 8) {
+        const rawInfo = message.raw?.Info;
+        if (rawInfo) {
+          const rawJid = rawInfo.Chat || rawInfo.SenderAlt || rawInfo.Sender || "";
+          if (rawJid && rawJid.includes("@")) {
+            extractedPhone = rawJid.split("@")[0];
+          }
+        }
+      }
+
+      // Fallback final para contactId
+      if (!extractedPhone) {
+        if (body.contactId) {
+          extractedPhone = String(body.contactId);
+        } else if (message.contactId) {
+          extractedPhone = String(message.contactId);
+        }
+      }
+
+      phone = extractedPhone.replace(/[^0-9]/g, "");
       if (!phone) {
         return NextResponse.json({ ok: true, ignored: "telefone_nao_identificado_wisetalk" });
       }
@@ -91,6 +103,46 @@ export async function POST(req: Request) {
       textToSave = (message.body || "").trim();
       detectedMediaType = message.mediaType || "chat";
       isAudioMessage = detectedMediaType === "audio";
+
+      // Tratar mensagens enviadas pelo atendente humano ou pela IA (fromMe === true)
+      if (message.fromMe === true) {
+        const existingMsg = await prisma.message.findUnique({
+          where: { id: messageId }
+        });
+        if (existingMsg) {
+          return NextResponse.json({ ok: true, ignored: "mensagem_propria_ja_salva" });
+        }
+
+        let conversation = await prisma.conversation.findFirst({
+          where: { source: "whatsapp", phone },
+        });
+        if (!conversation) {
+          conversation = await prisma.conversation.create({
+            data: { source: "whatsapp", phone },
+          });
+        }
+
+        let agentMessageText = textToSave;
+        if (!agentMessageText && detectedMediaType && detectedMediaType !== "chat") {
+          agentMessageText = `[Mídia enviada pelo atendente: ${detectedMediaType}]`;
+        }
+
+        if (agentMessageText.trim()) {
+          await prisma.message.create({
+            data: {
+              id: messageId,
+              conversationId: conversation.id,
+              role: "model",
+              content: agentMessageText.trim(),
+            },
+          });
+          await prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
+          });
+        }
+        return NextResponse.json({ ok: true, saved: "mensagem_atendente_wisetalk" });
+      }
 
       // Download de mídia direto por link HTTP no WiseTalk
       if (message.mediaUrl && message.mediaUrl.trim() !== "" && (config.geminiApiKey || config.openaiApiKey || config.groqApiKey)) {

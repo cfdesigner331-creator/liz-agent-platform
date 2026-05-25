@@ -47,6 +47,7 @@ interface AgentConfig {
   securityShieldActive?: boolean;
   isDefaultPasswordActive?: boolean;
   whatsappProvider?: string;
+  lastPromptUpdateFromSuggestions?: string;
 }
 
 export default function ConfigPage() {
@@ -120,6 +121,81 @@ export default function ConfigPage() {
 
   // Active sub-tab
   const [activeTab, setActiveTab] = useState<"ai" | "instructions" | "evolution" | "voice" | "schedule" | "appearance" | "security">("ai");
+
+  // State variables for continuous learning system
+  const [suggestions, setSuggestions] = useState<{ id: string; content: string; createdAt: string; }[]>([]);
+  const [lastPromptUpdate, setLastPromptUpdate] = useState<string | null>(null);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState("");
+  const [generatingSuggestions, setGeneratingSuggestions] = useState(false);
+  const [compilingPrompt, setCompilingPrompt] = useState(false);
+
+  const fetchSuggestions = async () => {
+    setSuggestionsLoading(true);
+    setSuggestionsError("");
+    try {
+      const res = await fetch("/api/suggestions");
+      if (res.ok) {
+        const data = await res.json();
+        setSuggestions(data.suggestions || []);
+        setLastPromptUpdate(data.lastPromptUpdateFromSuggestions || null);
+      } else {
+        setSuggestionsError("Falha ao carregar as sugestões do sistema de aprendizado.");
+      }
+    } catch {
+      setSuggestionsError("Erro de rede ao conectar com o servidor.");
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const handleGenerateSuggestions = async () => {
+    setGeneratingSuggestions(true);
+    setSuggestionsError("");
+    try {
+      const res = await fetch("/api/suggestions", { method: "POST" });
+      if (res.ok) {
+        await fetchSuggestions();
+        setSuccess("Sugestões de melhoria geradas com base no histórico recente!");
+        setTimeout(() => setSuccess(""), 4000);
+      } else {
+        const err = await res.json();
+        setSuggestionsError(err.error || "Falha ao analisar histórico.");
+      }
+    } catch {
+      setSuggestionsError("Erro ao solicitar geração de sugestões.");
+    } finally {
+      setGeneratingSuggestions(false);
+    }
+  };
+
+  const handleCompilePrompt = async () => {
+    setCompilingPrompt(true);
+    setSuggestionsError("");
+    try {
+      const res = await fetch("/api/suggestions", { method: "PUT" });
+      if (res.ok) {
+        const data = await res.json();
+        updateField("systemPrompt", data.systemPrompt);
+        await fetchSuggestions();
+        setSuccess("System Prompt reconstruído e consolidado com sucesso!");
+        setTimeout(() => setSuccess(""), 4000);
+      } else {
+        const err = await res.json();
+        setSuggestionsError(err.error || "Falha ao compilar prompt.");
+      }
+    } catch {
+      setSuggestionsError("Erro ao solicitar compilação do prompt.");
+    } finally {
+      setCompilingPrompt(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "instructions") {
+      fetchSuggestions();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     // Generate full webhook URL dynamically based on location
@@ -753,6 +829,134 @@ export default function ConfigPage() {
                   placeholder="Insira as diretrizes do robô..."
                   required
                 />
+              </div>
+            </div>
+
+            {/* Sistema de Aprendizado Contínuo (Liz Learning) */}
+            <div className="card space-y-6 border-[rgba(168,85,247,0.2)] bg-[rgba(168,85,247,0.02)] shadow-[0_0_20px_rgba(168,85,247,0.01)]">
+              <div className="border-b border-[var(--border)] pb-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] flex items-center gap-2">
+                    <i className="fa-solid fa-brain text-purple-400"></i>
+                    Aprendizado Contínuo &amp; Reconstrução de Prompt
+                  </h3>
+                  <p className="text-xs text-[var(--text-3)] mt-0.5">
+                    O robô analisa interações reais e gera melhorias de forma inteligente. A cada 7 dias, a Liz reconstrói e consolida o System Prompt completo com base nestas sugestões.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleGenerateSuggestions}
+                    disabled={generatingSuggestions}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-400 hover:opacity-90 active:scale-95 transition-all text-xs font-semibold cursor-pointer disabled:opacity-40"
+                  >
+                    {generatingSuggestions ? (
+                      <>
+                        <i className="fa-solid fa-spinner animate-spin"></i>
+                        <span>Analisando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-graduation-cap"></i>
+                        <span>Gerar Sugestões via IA</span>
+                      </>
+                    )}
+                  </button>
+                  {suggestions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleCompilePrompt}
+                      disabled={compilingPrompt}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-dim)] text-[var(--accent)] hover:opacity-90 active:scale-95 transition-all text-xs font-semibold cursor-pointer disabled:opacity-40"
+                    >
+                      {compilingPrompt ? (
+                        <>
+                          <i className="fa-solid fa-spinner animate-spin"></i>
+                          <span>Compilando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="fa-solid fa-wand-magic-sparkles"></i>
+                          <span>Compilar Prompt Agora</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Status de Ciclo de 7 dias */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-[var(--border)] bg-[#090914] text-xs">
+                <div className="space-y-1.5">
+                  <span className="text-[var(--text-3)] block font-semibold uppercase tracking-wider text-[9px]">Última Consolidação de Prompt</span>
+                  <div className="flex items-center gap-2">
+                    <i className="fa-solid fa-calendar-check text-[var(--success)]"></i>
+                    <span className="font-mono font-bold text-[var(--text-1)]">
+                      {lastPromptUpdate ? new Date(lastPromptUpdate).toLocaleDateString("pt-BR") : new Date().toLocaleDateString("pt-BR")}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="text-[var(--text-3)] block font-semibold uppercase tracking-wider text-[9px]">Próxima Reconstrução Automática (7 dias)</span>
+                  <div className="flex items-center gap-2">
+                    <i className="fa-solid fa-clock-rotate-left text-purple-400"></i>
+                    <span className="font-mono font-bold text-[var(--text-1)]">
+                      {lastPromptUpdate 
+                        ? new Date(new Date(lastPromptUpdate).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR") 
+                        : new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR")}
+                    </span>
+                    <span className="text-[10px] text-purple-400">(A cada 7 dias de interações)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de Sugestões de Melhoria e data */}
+              <div className="space-y-3">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-3)] block">
+                  Linha do Tempo de Sugestões e Melhorias
+                </span>
+
+                {suggestionsLoading ? (
+                  <div className="flex items-center justify-center py-8 text-[var(--text-3)] gap-2 text-xs">
+                    <i className="fa-solid fa-circle-notch animate-spin text-purple-400 text-sm"></i>
+                    <span>Buscando timeline de aprendizado...</span>
+                  </div>
+                ) : suggestionsError ? (
+                  <div className="p-3 rounded-lg bg-[var(--error-dim)] border border-[rgba(248,113,113,0.15)] text-[var(--error)] text-xs flex items-center gap-2">
+                    <i className="fa-solid fa-circle-exclamation text-sm"></i>
+                    <span>{suggestionsError}</span>
+                  </div>
+                ) : suggestions.length === 0 ? (
+                  <div className="text-center py-8 border border-dashed border-[var(--border)] rounded-xl">
+                    <i className="fa-solid fa-lightbulb text-2xl text-[var(--text-3)] mb-2 block opacity-40"></i>
+                    <p className="text-xs text-[var(--text-2)] max-w-sm mx-auto leading-relaxed">
+                      Nenhuma sugestão operacional de prompt no banco de dados. Deixe o assistente atuar no WhatsApp para colher dados de conversas ou clique no botão de IA acima.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                    {suggestions.map((sug) => (
+                      <div
+                        key={sug.id}
+                        className="flex items-start gap-3 p-3 rounded-xl border border-[var(--border)] bg-[#090914] text-xs transition-colors hover:border-purple-500/30"
+                      >
+                        <div className="w-5 h-5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                          IA
+                        </div>
+                        <div className="space-y-1 flex-1">
+                          <p className="text-[var(--text-1)] leading-relaxed font-medium">
+                            {sug.content}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-[9px] text-[var(--text-3)] font-mono">
+                            <i className="fa-regular fa-calendar"></i>
+                            <span>Sugerida em {new Date(sug.createdAt).toLocaleDateString("pt-BR")} às {new Date(sug.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

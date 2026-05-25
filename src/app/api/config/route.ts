@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
+import { checkAndAutoCompilePrompt } from "@/lib/learning";
 
 const DEFAULT_PROMPT = `Você é a Liz, assistente de inteligência artificial da "Criações Freitas", uma confecção especializada em vestuário personalizado, estamparia premium e bordados industriais.
 
@@ -142,6 +143,7 @@ function sanitizeConfig(config: any) {
     observationMode: Boolean((config as any).observationMode ?? false),
     securityShieldActive: Boolean((config as any).securityShieldActive ?? true),
     whatsappProvider: (config as any).whatsappProvider || "evolution",
+    lastPromptUpdateFromSuggestions: config.lastPromptUpdateFromSuggestions || null,
     isDefaultPasswordActive: !config.customPassword || config.customPassword.trim() === "",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
@@ -154,6 +156,9 @@ export async function GET(req: Request) {
   }
 
   try {
+    // Verifica e autocompila o prompt se tiver passado o ciclo de 7 dias
+    await checkAndAutoCompilePrompt();
+
     let config = await prisma.agentConfig.findFirst();
     if (config && config.cartesiaVoiceId === "a0e9987c-1f5c-43f1-a675-5841029f9dbe") {
       config = await prisma.agentConfig.update({

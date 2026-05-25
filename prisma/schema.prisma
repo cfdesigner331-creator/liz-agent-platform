@@ -51,8 +51,15 @@ model AgentConfig {
   customPassword        String   @default("")
   securityShieldActive  Boolean  @default(true)
   whatsappProvider      String   @default("evolution")
+  lastPromptUpdateFromSuggestions DateTime @default(now())
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model Suggestion {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
 }
 
 model Conversation {

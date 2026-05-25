@@ -16,6 +16,8 @@ import {
   generateSpeech,
 } from "@/lib/media";
 
+import { checkAndAutoCompilePrompt } from "@/lib/learning";
+
 // Cache estático de mensagens em processamento concorrente para desduplicação
 const activeMessageIds = new Set<string>();
 
@@ -26,6 +28,13 @@ export async function POST(req: Request) {
     const config = await prisma.agentConfig.findFirst();
     if (!config || config.enabled === false) {
       return NextResponse.json({ ok: true, ignored: "agente_desativado" });
+    }
+
+    // Autocompilação do prompt a cada 7 dias de forma silenciosa e segura
+    try {
+      await checkAndAutoCompilePrompt();
+    } catch (e) {
+      console.warn("[Webhook] Falha na autocompilação automática do prompt:", e);
     }
 
     const provider = (config as any).whatsappProvider || "evolution";

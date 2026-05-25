@@ -112,6 +112,15 @@ try {
         CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation" ("id") ON DELETE CASCADE ON UPDATE CASCADE
       )
     `).run();
+
+    // Tabela Suggestion
+    db.prepare(`
+      CREATE TABLE IF NOT EXISTS "Suggestion" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "content" TEXT NOT NULL,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
   })();
 
   // Verifica e adiciona dinamicamente colunas que podem estar faltando em instalações existentes
@@ -230,6 +239,10 @@ try {
     if (!columns.includes("whatsappProvider")) {
       console.log("[Migrate] Adicionando coluna 'whatsappProvider' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "whatsappProvider" TEXT NOT NULL DEFAULT "evolution"').run();
+    }
+    if (!columns.includes("lastPromptUpdateFromSuggestions")) {
+      console.log("[Migrate] Adicionando coluna 'lastPromptUpdateFromSuggestions' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "lastPromptUpdateFromSuggestions" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP').run();
     }
 
     // Message table new columns

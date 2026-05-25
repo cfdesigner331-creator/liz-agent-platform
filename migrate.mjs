@@ -256,6 +256,14 @@ try {
       console.log("[Migrate] Adicionando coluna 'mediaCaption' à tabela Message...");
       db.prepare('ALTER TABLE "Message" ADD COLUMN "mediaCaption" TEXT').run();
     }
+
+    // Conversation table new columns
+    const convInfo = db.prepare("PRAGMA table_info('Conversation')").all();
+    const convCols = convInfo.map(c => c.name);
+    if (!convCols.includes("ticketId")) {
+      console.log("[Migrate] Adicionando coluna 'ticketId' à tabela Conversation...");
+      db.prepare('ALTER TABLE "Conversation" ADD COLUMN "ticketId" TEXT').run();
+    }
   } catch (alterErr) {
     console.warn("[Migrate] Aviso ao executar verificação estrutural (ALTER TABLE):", alterErr.message);
   }

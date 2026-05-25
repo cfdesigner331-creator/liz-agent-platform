@@ -66,6 +66,7 @@ model Conversation {
   id        String    @id @default(cuid())
   source    String    @default("chat")
   phone     String?
+  ticketId  String?   // ID do ticket no WiseTalk CRM para vincular mensagens do atendente
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

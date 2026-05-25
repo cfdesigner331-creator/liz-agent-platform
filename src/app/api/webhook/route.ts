@@ -63,97 +63,65 @@ export async function POST(req: Request) {
       }
 
       messageId = message.id;
-
-      // Extração dinâmica e resiliente do telefone do CLIENTE
-      // Fontes de maior confiabilidade: campos estruturados do CRM (contact.number, ticket.contact.number)
-      let extractedPhone = "";
-      if (body.contact?.number) {
-        extractedPhone = String(body.contact.number);
-      } else if (body.ticket?.contact?.number) {
-        extractedPhone = String(body.ticket.contact.number);
-      } else if (message.contact?.number) {
-        extractedPhone = String(message.contact.number);
-      }
-
-      // Loga o payload bruto para diagnóstico apenas quando não encontrou número nos campos estruturados
-      if (!extractedPhone || extractedPhone.replace(/[^0-9]/g, "").length < 8) {
-        const rawInfo = message.raw?.Info;
-        console.log(`[Webhook WiseTalk] Número não encontrado em campos estruturados. Tentando raw.Info. fromMe=${message.fromMe} | Chat=${rawInfo?.Chat} | Sender=${rawInfo?.Sender} | SenderAlt=${rawInfo?.SenderAlt} | RecipientAlt=${rawInfo?.RecipientAlt}`);
-
-        if (rawInfo) {
-          if (message.fromMe === true) {
-            // Para mensagens DO ATENDENTE (fromMe=true):
-            // O destino (cliente) está em RecipientAlt ou Chat, NÃO em SenderAlt (que é o próprio atendente)
-            const clientCandidates = [rawInfo.RecipientAlt, rawInfo.Chat, rawInfo.Sender];
-            const clientPhoneJid = clientCandidates.find(c => c && typeof c === "string" && c.endsWith("@s.whatsapp.net"));
-            if (clientPhoneJid) {
-              extractedPhone = clientPhoneJid.split("@")[0];
-            } else {
-              // Fallback: qualquer JID que não seja @lid nos campos de destino
-              const anyJid = clientCandidates.find(c => c && typeof c === "string" && c.includes("@") && !c.endsWith("@lid"));
-              if (anyJid) extractedPhone = anyJid.split("@")[0];
-            }
-          } else {
-            // Para mensagens DO CLIENTE (fromMe=false):
-            // O remetente real está em SenderAlt ou Chat
-            const clientCandidates = [rawInfo.SenderAlt, rawInfo.Chat, rawInfo.Sender];
-            const clientPhoneJid = clientCandidates.find(c => c && typeof c === "string" && c.endsWith("@s.whatsapp.net"));
-            if (clientPhoneJid) {
-              extractedPhone = clientPhoneJid.split("@")[0];
-            } else {
-              const anyJid = clientCandidates.find(c => c && typeof c === "string" && c.includes("@") && !c.endsWith("@lid"));
-              if (anyJid) extractedPhone = anyJid.split("@")[0];
-              else {
-                // Último recurso: qualquer JID mesmo que @lid
-                const fallbackJid = rawInfo.SenderAlt || rawInfo.Chat || rawInfo.Sender || "";
-                if (fallbackJid && fallbackJid.includes("@")) extractedPhone = fallbackJid.split("@")[0];
-              }
-            }
-          }
-        }
-      }
-
-      // Fallback final para contactId do CRM quando tudo falhar
-      if (!extractedPhone || extractedPhone.replace(/[^0-9]/g, "").length < 6) {
-        if (body.contactId) {
-          extractedPhone = String(body.contactId);
-        } else if (message.contactId) {
-          extractedPhone = String(message.contactId);
-        }
-      }
-
-      phone = extractedPhone.replace(/[^0-9]/g, "");
+      const wisetalkTicketId = String(message.ticketId);
 
       textToSave = (message.body || "").trim();
       detectedMediaType = message.mediaType || "chat";
       isAudioMessage = detectedMediaType === "audio";
 
-      // Tratar mensagens enviadas pelo atendente humano ou pela IA (fromMe === true)
+      // -----------------------------------------------------------------------
+      // MENSAGEM DO ATENDENTE (fromMe=true)
+      // Para mensagens enviadas pelo atendente, o WiseTalk NÃO envia o número real
+      // do cliente — apenas o contactId interno (6 dígitos). Por isso, usamos o
+      // ticketId como chave para encontrar a conversa já existente do cliente.
+      // -----------------------------------------------------------------------
       if (message.fromMe === true) {
-        console.log(`[Webhook WiseTalk] Mensagem do atendente (fromMe=true). Telefone do cliente: ${phone}. TicketId: ${message.ticketId}`);
+        console.log(`[Webhook WiseTalk] Mensagem do atendente (fromMe=true). TicketId: ${wisetalkTicketId}. Msg: "${textToSave.substring(0, 60)}"`);
 
-        if (!phone || phone.length < 6) {
-          console.warn(`[Webhook WiseTalk] Telefone inválido para mensagem do atendente. Ignorando.`);
-          return NextResponse.json({ ok: true, ignored: "telefone_atendente_nao_identificado" });
-        }
-
-        const existingMsg = await prisma.message.findUnique({
-          where: { id: messageId }
-        });
+        const existingMsg = await prisma.message.findUnique({ where: { id: messageId } });
         if (existingMsg) {
           return NextResponse.json({ ok: true, ignored: "mensagem_propria_ja_salva" });
         }
 
-        // Busca a conversa EXISTENTE do cliente — a mensagem do atendente SEMPRE deve aparecer
-        // como resposta dentro da conversa do cliente, nunca como contato separado
+        // Estratégia 1: Encontrar conversa pelo ticketId (mais confiável)
         let conversation = await prisma.conversation.findFirst({
-          where: { source: "whatsapp", phone },
+          where: { ticketId: wisetalkTicketId },
           orderBy: { updatedAt: "desc" },
         });
+
+        // Estratégia 2: Tentar extrair telefone do cliente via raw.Info.RecipientAlt
+        // (funciona quando o cliente NÃO usa LID/privacy session)
         if (!conversation) {
-          conversation = await prisma.conversation.create({
-            data: { source: "whatsapp", phone },
-          });
+          const rawInfo = message.raw?.Info;
+          let clientPhone = "";
+          if (rawInfo) {
+            const clientCandidates = [rawInfo.RecipientAlt, rawInfo.Chat, rawInfo.Sender];
+            const realJid = clientCandidates.find(c => c && typeof c === "string" && c.endsWith("@s.whatsapp.net"));
+            if (realJid) clientPhone = realJid.split("@")[0].replace(/[^0-9]/g, "");
+          }
+          if (!clientPhone && body.ticket?.contact?.number) {
+            const n = String(body.ticket.contact.number).replace(/[^0-9]/g, "");
+            if (n.length >= 8) clientPhone = n;
+          }
+          if (!clientPhone && body.contact?.number) {
+            const n = String(body.contact.number).replace(/[^0-9]/g, "");
+            if (n.length >= 8) clientPhone = n;
+          }
+
+          if (clientPhone) {
+            conversation = await prisma.conversation.findFirst({
+              where: { source: "whatsapp", phone: clientPhone },
+              orderBy: { updatedAt: "desc" },
+            });
+            console.log(`[Webhook WiseTalk] Atendente: conversa encontrada por phone=${clientPhone}: ${!!conversation}`);
+          }
+        } else {
+          console.log(`[Webhook WiseTalk] Atendente: conversa encontrada por ticketId=${wisetalkTicketId} (phone: ${conversation.phone})`);
+        }
+
+        if (!conversation) {
+          console.warn(`[Webhook WiseTalk] Atendente: não foi possível encontrar conversa para ticketId=${wisetalkTicketId}. Mensagem descartada.`);
+          return NextResponse.json({ ok: true, ignored: "conversa_nao_encontrada_para_atendente" });
         }
 
         let agentMessageText = textToSave;
@@ -174,15 +142,51 @@ export async function POST(req: Request) {
             where: { id: conversation.id },
             data: { updatedAt: new Date() },
           });
+          console.log(`[Webhook WiseTalk] Mensagem do atendente salva na conversa ${conversation.id} (phone: ${conversation.phone})`);
         }
         return NextResponse.json({ ok: true, saved: "mensagem_atendente_wisetalk" });
       }
 
-      // Para mensagens do cliente (fromMe=false), validar telefone obrigatoriamente
+      // -----------------------------------------------------------------------
+      // MENSAGEM DO CLIENTE (fromMe=false)
+      // -----------------------------------------------------------------------
+
+      // Extração do telefone do cliente — fontes por ordem de confiabilidade
+      let extractedPhone = "";
+      if (body.contact?.number) {
+        extractedPhone = String(body.contact.number);
+      } else if (body.ticket?.contact?.number) {
+        extractedPhone = String(body.ticket.contact.number);
+      } else if (message.contact?.number) {
+        extractedPhone = String(message.contact.number);
+      }
+
+      // Se não encontrou nos campos estruturados, tenta via raw.Info
+      if (!extractedPhone || extractedPhone.replace(/[^0-9]/g, "").length < 8) {
+        const rawInfo = message.raw?.Info;
+        console.log(`[Webhook WiseTalk] Campos estruturados sem telefone. raw.Info: Chat=${rawInfo?.Chat} | SenderAlt=${rawInfo?.SenderAlt} | RecipientAlt=${rawInfo?.RecipientAlt}`);
+        if (rawInfo) {
+          const candidates = [rawInfo.SenderAlt, rawInfo.Chat, rawInfo.Sender];
+          const realJid = candidates.find(c => c && typeof c === "string" && c.endsWith("@s.whatsapp.net"));
+          if (realJid) {
+            extractedPhone = realJid.split("@")[0];
+          } else {
+            const anyJid = candidates.find(c => c && typeof c === "string" && c.includes("@") && !c.endsWith("@lid"));
+            if (anyJid) extractedPhone = anyJid.split("@")[0];
+            else {
+              const fallbackJid = rawInfo.SenderAlt || rawInfo.Chat || rawInfo.Sender || "";
+              if (fallbackJid && fallbackJid.includes("@")) extractedPhone = fallbackJid.split("@")[0];
+            }
+          }
+        }
+      }
+
+      phone = extractedPhone.replace(/[^0-9]/g, "");
       if (!phone || phone.length < 6) {
-        console.warn(`[Webhook WiseTalk] Telefone inválido para mensagem do cliente: "${phone}".`);
+        console.warn(`[Webhook WiseTalk] Telefone inválido para mensagem do cliente: "${extractedPhone}". ticketId=${wisetalkTicketId}`);
         return NextResponse.json({ ok: true, ignored: "telefone_nao_identificado_wisetalk" });
       }
+
 
       // Download de mídia direto por link HTTP no WiseTalk
       if (message.mediaUrl && message.mediaUrl.trim() !== "" && (config.geminiApiKey || config.openaiApiKey || config.groqApiKey)) {
@@ -410,12 +414,27 @@ export async function POST(req: Request) {
     }
 
     // Buscar ou criar conversa
+    // Para WiseTalk: associar o ticketId à conversa para que futuras mensagens do atendente
+    // possam ser vinculadas corretamente via ticketId (o WiseTalk não envia o telefone do cliente
+    // para mensagens enviadas pelo atendente, apenas o contactId interno de 6 dígitos)
+    const wisetalkTicketIdForConv = provider === "wisetalk" ? (body.message?.ticketId ? String(body.message.ticketId) : undefined) : undefined;
+
     let conversation = await prisma.conversation.findFirst({
       where: { source: "whatsapp", phone },
     });
     if (!conversation) {
       conversation = await prisma.conversation.create({
-        data: { source: "whatsapp", phone },
+        data: {
+          source: "whatsapp",
+          phone,
+          ...(wisetalkTicketIdForConv ? { ticketId: wisetalkTicketIdForConv } : {}),
+        },
+      });
+    } else if (wisetalkTicketIdForConv && conversation.ticketId !== wisetalkTicketIdForConv) {
+      // Atualiza o ticketId caso tenha mudado (ex: novo ticket aberto para o mesmo número)
+      conversation = await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: { ticketId: wisetalkTicketIdForConv },
       });
     }
 

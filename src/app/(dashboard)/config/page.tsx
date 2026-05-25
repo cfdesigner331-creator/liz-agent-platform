@@ -399,11 +399,11 @@ export default function ConfigPage() {
           className={`pb-3 px-2 font-[var(--font-display)] text-sm font-semibold tracking-wide border-b-2 transition-all cursor-pointer ${
             activeTab === "evolution"
               ? "border-[var(--accent)] text-[var(--accent-text)] font-bold"
-              : "border-transparent text-[var(--text-2)] hover:text-[var(--text-1)]"
+              : "border-transparent text-[var(--text-2)] hover:text(--text-1)"
           }`}
         >
-          <i className="fa-brands fa-whatsapp mr-2 text-xs"></i>
-          Configuração WhatsApp
+          <i className="fa-solid fa-comments-dollar mr-2 text-xs"></i>
+          Conexão CRM (WiseTalk)
         </button>
         <button
           type="button"
@@ -819,45 +819,45 @@ export default function ConfigPage() {
           <div className="space-y-6 animate-fade-up">
             <div className="card space-y-6">
               <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3">
-                Credenciais e Modos da Evolution API
+                Parâmetros de Conexão do CRM WiseTalk
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[var(--text-2)]">
-                    Evolution Base URL
+                    WiseTalk URL Base
                   </label>
                   <input
                     type="url"
                     value={config.evolutionUrl}
                     onChange={(e) => updateField("evolutionUrl", e.target.value)}
                     className="field-input text-xs font-mono"
-                    placeholder="Ex: https://evo.meudominio.com"
+                    placeholder="Ex: https://chat3.crmwisetalk.com.br"
                   />
                   <span className="text-[10px] text-[var(--text-3)]">
-                    Endereço base do seu servidor VPS onde o container Evolution API está escutando.
+                    O endereço base do seu painel do CRM WiseTalk usado para integrações.
                   </span>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[var(--text-2)]">
-                    Nome da Instância (Instance Name)
+                    ID da API (apiId)
                   </label>
                   <input
                     type="text"
                     value={config.instanceId}
                     onChange={(e) => updateField("instanceId", e.target.value)}
                     className="field-input text-xs font-mono"
-                    placeholder="Ex: liz-whatsapp"
+                    placeholder="Ex: 12"
                   />
                   <span className="text-[10px] text-[var(--text-3)]">
-                    O nome exato do pool de conexões criado no painel da sua Evolution API.
+                    O ID exclusivo da API Externa criado no menu de APIs do WiseTalk.
                   </span>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
-                    <span>Chave de API (Global ApiKey)</span>
+                    <span>Token de Integração (Bearer Token)</span>
                     <button
                       type="button"
                       onClick={() => setShowEvoKey(!showEvoKey)}
@@ -871,10 +871,10 @@ export default function ConfigPage() {
                     value={config.evolutionApiKey}
                     onChange={(e) => updateField("evolutionApiKey", e.target.value)}
                     className="field-input text-xs font-mono"
-                    placeholder="SuaApiKeyEvolution..."
+                    placeholder="Token JWT do WiseTalk..."
                   />
                   <span className="text-[10px] text-[var(--text-3)]">
-                    Utilizado para autenticar os disparos automáticos HTTP de retorno de mensagens.
+                    Chave de autenticação gerada no WiseTalk para autorizar o envio de mensagens da IA.
                   </span>
                 </div>
 

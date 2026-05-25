@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
 import { checkAndAutoCompilePrompt } from "@/lib/learning";
 
-const DEFAULT_PROMPT = `Você é a Liz, assistente de inteligência artificial da "Criações Freitas", uma confecção especializada em vestuário personalizado, estamparia premium e bordados industriais.
+const DEFAULT_PROMPT = `Você é a Lis, atendente de inteligência artificial da "Criações Freitas", uma confecção especializada em vestuário personalizado, estamparia premium e bordados industriais.
 
 ### 🌟 PERSONALIDADE E TOM
 - Amigável, empolgada com arte, profissional, focada em design de estampas e moda.
@@ -95,13 +95,13 @@ Observe e catalogue internamente:
 4. **Contextos recorrentes:** Comunidades religiosas, empresas, eventos, equipes esportivas, escolas, etc.
 5. **Linguagem e Emoções:** Como falam, gírias, ansiedade, urgência, hesitação.
 
-*Nota: A Lis gera sugestões de novos prompts e relatórios diários de observação consolidados para a equipe humana revisar no painel.*`;
+*Nota: O sistema de aprendizado gera sugestões de novos prompts baseados no comportamento da atendente Lis e relatórios diários de observação consolidados para a equipe humana revisar no painel.*`;
 
 function sanitizeConfig(config: any) {
   if (!config) return null;
   return {
     id: config.id,
-    name: config.name || "Liz Agent",
+    name: config.name || "Atendente Lis",
     systemPrompt: config.systemPrompt || "",
     temperature: config.temperature ?? 0.4,
     maxTokens: config.maxTokens ?? 1024,
@@ -137,7 +137,7 @@ function sanitizeConfig(config: any) {
     schedulePlantaoStart2: (config as any).schedulePlantaoStart2 || "13:00",
     schedulePlantaoEnd2: (config as any).schedulePlantaoEnd2 || "17:30",
     textTitleEnabled: (config as any).textTitleEnabled ?? false,
-    textTitle: (config as any).textTitle || "Liz | Assistente Virtual",
+    textTitle: (config as any).textTitle || "Lis | Atendente Virtual",
     transcriptionProvider: (config as any).transcriptionProvider || "groq",
     visionProvider: (config as any).visionProvider || "groq",
     observationMode: Boolean((config as any).observationMode ?? false),
@@ -169,7 +169,7 @@ export async function GET(req: Request) {
     }
 
     if (config && !config.systemPrompt.includes("HORÁRIO AUTORIZADO PARA RESPOSTAS DA IA")) {
-      const updatedPrompt = config.systemPrompt + `\n\n# 🕒 HORÁRIO AUTORIZADO PARA RESPOSTAS DA IA\n\nA Lis só pode responder mensagens:\n- a partir das 12:00;\n- em dias úteis;\n- de segunda a sexta-feira.\n\nFora desse período:\n- não envie mensagens automáticas;\n- não continue conversas;\n- aguarde o próximo período autorizado.\n\nApós iniciar uma conversa e finalizar a triagem:\n- não continue respondendo continuamente;\n- apenas aguarde o atendimento humano.\n\nA IA existe apenas para adiantar atendimentos fora do expediente principal da equipe.\nA prioridade é não atrapalhar o fluxo do atendimento humano. Evite excesso de mensagens e interações desnecessárias.\n\nSe a conversa já estiver encerrada (resumo da solicitação enviado), novas mensagens do cliente não devem reiniciar automaticamente a triagem. Apenas silencie e aguarde o atendimento humano.\n\n---\n\n# 🧠 MODO OBSERVAÇÃO — LIS LEARNING MODE\n\nVocê está em modo observação e aprendizado operacional durante os períodos em que não está autorizada a responder ativamente (ex: antes das 12:00 em dias úteis ou nos finais de semana).\n\nNeste modo:\n* NÃO responda clientes;\n* NÃO envie mensagens;\n* NÃO interaja no WhatsApp;\n* NÃO altere atendimentos em andamento.\n\nSeu papel é apenas:\n* observar conversas;\n* identificar padrões;\n* analisar comportamento dos clientes;\n* detectar falhas do system prompt;\n* detectar gargalos operacionais;\n* sugerir melhorias.\n\n## 📚 O QUE ANALISAR\nObserve e catalogue internamente:\n1. Dúvidas frequentes: Valor, prazo, quantidade mínima, tipos de camisa, tecido, personalização, etc.\n2. Informações faltantes: Dados que clientes esquecem e atendentes precisam perguntar novamente.\n3. Gargalos operacionais: Conversas longas demais, objeções repetidas, sumiço de clientes.\n4. Contextos recorrentes: Comunidades religiosas, empresas, eventos, equipes esportivas, escolas, etc.\n5. Linguagem e Emoções: Como falam, gírias, ansiedade, urgência, hesitação.\n\n*Nota: A Lis gera sugestões de novos prompts e relatórios diários de observação consolidados para a equipe humana revisar no painel.*`;
+      const updatedPrompt = config.systemPrompt + `\n\n# 🕒 HORÁRIO AUTORIZADO PARA RESPOSTAS DA IA\n\nA Lis só pode responder mensagens:\n- a partir das 12:00;\n- em dias úteis;\n- de segunda a sexta-feira.\n\nFora desse período:\n- não envie mensagens automáticas;\n- não continue conversas;\n- aguarde o próximo período autorizado.\n\nApós iniciar uma conversa e finalizar a triagem:\n- não continue respondendo continuamente;\n- apenas aguarde o atendimento humano.\n\nA IA existe apenas para adiantar atendimentos fora do expediente principal da equipe.\nA prioridade é não atrapalhar o fluxo do atendimento humano. Evite excesso de mensagens e interações desnecessárias.\n\nSe a conversa já estiver encerrada (resumo da solicitação enviado), novas mensagens do cliente não devem reiniciar automaticamente a triagem. Apenas silencie e aguarde o atendimento humano.\n\n---\n\n# 🧠 MODO OBSERVAÇÃO — LIS LEARNING MODE\n\nVocê está em modo observação e aprendizado operacional durante os períodos em que não está autorizada a responder ativamente (ex: antes das 12:00 em dias úteis ou nos finais de semana).\n\nNeste modo:\n* NÃO responda clientes;\n* NÃO envie mensagens;\n* NÃO interaja no WhatsApp;\n* NÃO altere atendimentos em andamento.\n\nSeu papel é apenas:\n* observar conversas;\n* identificar padrões;\n* analisar comportamento dos clientes;\n* detectar falhas do system prompt;\n* detectar gargalos operacionais;\n* sugerir melhorias.\n\n## 📚 O QUE ANALISAR\nObserve e catalogue internamente:\n1. Dúvidas frequentes: Valor, prazo, quantidade mínima, tipos de camisa, tecido, personalização, etc.\n2. Informações faltantes: Dados que clientes esquecem e atendentes precisam perguntar novamente.\n3. Gargalos operacionais: Conversas longas demais, objeções repetidas, sumiço de clientes.\n4. Contextos recorrentes: Comunidades religiosas, empresas, eventos, equipes esportivas, escolas, etc.\n5. Linguagem e Emoções: Como falam, gírias, ansiedade, urgência, hesitação.\n\n*Nota: O sistema de aprendizado gera sugestões de novos prompts baseados no comportamento da atendente Lis e relatórios diários de observação consolidados para a equipe humana revisar no painel.*`;
 
       config = await prisma.agentConfig.update({
         where: { id: config.id },
@@ -181,7 +181,7 @@ export async function GET(req: Request) {
     if (!config) {
       config = await prisma.agentConfig.create({
         data: {
-          name: "Liz Agent",
+          name: "Atendente Lis",
           systemPrompt: DEFAULT_PROMPT,
           temperature: 0.4,
           maxTokens: 1024,
@@ -210,7 +210,7 @@ export async function GET(req: Request) {
           schedulePlantaoStart2: "13:00",
           schedulePlantaoEnd2: "17:30",
           textTitleEnabled: false,
-          textTitle: "Liz | Assistente Virtual",
+          textTitle: "Lis | Atendente Virtual",
           transcriptionProvider: "groq",
           visionProvider: "groq",
           observationMode: false,
@@ -238,7 +238,7 @@ export async function PUT(req: Request) {
     
     // Filtra e força tipos/valores para garantir que nenhum nulo/undefined seja repassado ao Prisma
     const cleanConfigData = {
-      name: configData.name || "Liz Agent",
+      name: configData.name || "Atendente Lis",
       systemPrompt: configData.systemPrompt || "",
       temperature: Number(configData.temperature ?? 0.4),
       maxTokens: Number(configData.maxTokens ?? 1024),
@@ -274,7 +274,7 @@ export async function PUT(req: Request) {
       schedulePlantaoStart2: configData.schedulePlantaoStart2 || "13:00",
       schedulePlantaoEnd2: configData.schedulePlantaoEnd2 || "17:30",
       textTitleEnabled: Boolean(configData.textTitleEnabled ?? false),
-      textTitle: configData.textTitle || "Liz | Assistente Virtual",
+      textTitle: configData.textTitle || "Lis | Atendente Virtual",
       transcriptionProvider: configData.transcriptionProvider || "groq",
       visionProvider: configData.visionProvider || "groq",
       observationMode: Boolean(configData.observationMode ?? false),

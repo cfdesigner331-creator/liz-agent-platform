@@ -23,7 +23,7 @@ export async function generateSuggestionsFromHistory(): Promise<string[]> {
   // Reverte para ordem cronológica e formata
   const formattedHistory = messages
     .reverse()
-    .map((msg) => `${msg.role === "user" ? "Cliente" : "Liz (IA)"}: ${msg.content}`)
+    .map((msg) => `${msg.role === "user" ? "Cliente" : "Atendente (IA)"}: ${msg.content}`)
     .join("\n");
 
   const promptText = `Você é o Diretor de Aprendizado Operacional deste sistema de IA. Analise o histórico recente de interações e identifique padrões de comportamento dos clientes e dos atendentes humanos para auto-aprimorar o System Prompt da assistente configurada.

@@ -52,7 +52,7 @@ interface AgentConfig {
 
 export default function ConfigPage() {
   const [config, setConfig] = useState<AgentConfig>({
-    name: "Liz Agent",
+    name: "Atendente Lis",
     systemPrompt: "",
     temperature: 0.4,
     maxTokens: 1024,
@@ -86,7 +86,7 @@ export default function ConfigPage() {
     schedulePlantaoStart2: "13:00",
     schedulePlantaoEnd2: "17:30",
     textTitleEnabled: false,
-    textTitle: "Liz | Assistente Virtual",
+    textTitle: "Lis | Atendente Virtual",
     transcriptionProvider: "groq",
     visionProvider: "groq",
     groqTranscriptionModel: "whisper-large-v3-turbo",
@@ -820,7 +820,7 @@ export default function ConfigPage() {
 
               <div className="space-y-2">
                 <p className="text-xs text-[var(--text-2)] leading-relaxed">
-                  Este é o "cérebro" do agente. Defina a personalidade da Liz, os produtos que ela vende, as regras de quantidades e formas de pagamento, e o modelo estruturado para fechar vendas.
+                  Este é o "cérebro" do agente. Defina a personalidade da atendente (como a Lis), os produtos que ela vende, as regras de quantidades e formas de pagamento, e o modelo estruturado para fechar vendas.
                 </p>
                 <textarea
                   value={config.systemPrompt}
@@ -832,7 +832,7 @@ export default function ConfigPage() {
               </div>
             </div>
 
-            {/* Sistema de Aprendizado Contínuo (Liz Learning) */}
+            {/* Sistema de Aprendizado Contínuo (Continuous Learning) */}
             <div className="card space-y-6 border-[rgba(168,85,247,0.2)] bg-[rgba(168,85,247,0.02)] shadow-[0_0_20px_rgba(168,85,247,0.01)]">
               <div className="border-b border-[var(--border)] pb-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -841,7 +841,7 @@ export default function ConfigPage() {
                     Aprendizado Contínuo &amp; Reconstrução de Prompt
                   </h3>
                   <p className="text-xs text-[var(--text-3)] mt-0.5">
-                    O robô analisa interações reais e gera melhorias de forma inteligente. A cada 7 dias, a Liz reconstrói e consolida o System Prompt completo com base nestas sugestões.
+                    O robô analisa interações reais e gera melhorias de forma inteligente. A cada 7 dias, o sistema reconstrói e consolida o System Prompt completo com base nestas sugestões.
                   </p>
                 </div>
                 <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
@@ -989,7 +989,7 @@ export default function ConfigPage() {
 
               <div className="text-xs text-[var(--text-2)] leading-relaxed space-y-4">
                 <p>
-                  Quando o <strong className="text-purple-400">Modo Treinamento (Observação)</strong> está ativado, a Liz entra em estado de aprendizado operacional permanente:
+                  Quando o <strong className="text-purple-400">Modo Treinamento (Observação)</strong> está ativado, o sistema entra em estado de aprendizado operacional permanente:
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
@@ -999,7 +999,7 @@ export default function ConfigPage() {
                       <span>Respostas Desativadas</span>
                     </div>
                     <p className="text-[11px] text-[var(--text-3)] leading-relaxed">
-                      A Liz não enviará nenhuma mensagem automática no WhatsApp, mantendo o fluxo inteiramente livre para sua equipe.
+                      O sistema não enviará nenhuma mensagem automática no WhatsApp, mantendo o fluxo inteiramente livre para sua equipe.
                     </p>
                   </div>
 
@@ -1278,7 +1278,7 @@ export default function ConfigPage() {
                       required
                     />
                     <span className="text-[10px] text-[var(--text-3)]">
-                      Nome que aparecerá em negrito no topo da mensagem. Exemplo: <strong className="text-[var(--text-2)]">*{config.textTitle || "Liz | Assistente Virtual"}*</strong>
+                      Nome que aparecerá em negrito no topo da mensagem. Exemplo: <strong className="text-[var(--text-2)]">*{config.textTitle || "Lis | Atendente Virtual"}*</strong>
                     </span>
                   </div>
                 </div>
@@ -1292,7 +1292,7 @@ export default function ConfigPage() {
                 Fuso Horário & Localização do Agente
               </h3>
               <p className="text-xs text-[var(--text-2)] leading-relaxed">
-                Configure o fuso horário da Liz. Isso será utilizado tanto para o <strong>horário de funcionamento (comercial/plantão)</strong> quanto para a <strong>IA saber a data e hora corretas do seu fuso horário</strong> ao saudar o cliente (evitando dar 'boa tarde' no período da manhã).
+                Configure o fuso horário do atendente. Isso será utilizado tanto para o <strong>horário de funcionamento (comercial/plantão)</strong> quanto para a <strong>IA saber a data e hora corretas do seu fuso horário</strong> ao saudar o cliente (evitando dar 'boa tarde' no período da manhã).
               </p>
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-[var(--text-2)]">Fuso Horário (Timezone)</label>
@@ -1379,7 +1379,7 @@ export default function ConfigPage() {
                 Modo de Resposta por Voz
               </h3>
               <p className="text-xs text-[var(--text-2)] leading-relaxed">
-                Define quando a Liz responde com uma <strong>nota de voz</strong> sintetizada pelo Gemini TTS em vez de texto.
+                Define quando o atendente responde com uma <strong>nota de voz</strong> sintetizada pelo Gemini TTS em vez de texto.
                 O áudio é gerado em alta qualidade e enviado diretamente como mensagem de voz no WhatsApp.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1418,7 +1418,7 @@ export default function ConfigPage() {
               <div className="card space-y-6">
                 <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3 flex items-center gap-2">
                   <i className="fa-solid fa-waveform-lines text-purple-400 text-xs"></i>
-                  Voz da Liz (Gemini TTS)
+                  Voz da Atendente (Gemini TTS)
                 </h3>
                 <p className="text-xs text-[var(--text-2)] leading-relaxed">
                   Escolha a voz sintética usada pelo Gemini TTS. Cada voz possui timbre, entonação e ritmo únicos.
@@ -1506,7 +1506,7 @@ export default function ConfigPage() {
                       required
                     />
                     <span className="text-[10px] text-[var(--text-3)]">
-                      O identificador UUID único da voz que a Liz usará para falar.
+                      O identificador UUID único da voz que o atendente usará para falar.
                     </span>
                   </div>
                 </div>

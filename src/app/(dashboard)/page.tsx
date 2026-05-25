@@ -302,7 +302,7 @@ export default function PlaygroundPage() {
                 Simulador de Atendimento Comercial
               </h1>
               <p className="text-sm text-[var(--text-2)] max-w-md mb-8 leading-relaxed">
-                Interaja diretamente com a Liz neste ambiente de teste. Simule um
+                Interaja diretamente com o atendente neste ambiente de teste. Simule um
                 cliente enviando mensagens para analisar as respostas da IA, regras de
                 minutos/pedidos e a extração estruturada de leads de forma isolada do WhatsApp.
               </p>
@@ -394,7 +394,7 @@ export default function PlaygroundPage() {
                       </span>
                     </div>
                     <span className="text-[9px] font-[var(--font-mono)] text-[var(--text-3)] mt-1 ml-2">
-                      Liz está digitando...
+                      Digitando...
                     </span>
                   </div>
                 </div>

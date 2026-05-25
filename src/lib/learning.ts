@@ -26,13 +26,25 @@ export async function generateSuggestionsFromHistory(): Promise<string[]> {
     .map((msg) => `${msg.role === "user" ? "Cliente" : "Liz (IA)"}: ${msg.content}`)
     .join("\n");
 
-  const promptText = `Você é o Diretor de Aprendizado Operacional da Liz. Analise o histórico recente de interações e identifique pontos onde a Liz falhou, dúvidas frequentes não respondidas, ou novos padrões de atendimento.
+  const promptText = `Você é o Diretor de Aprendizado Operacional da Liz. Analise o histórico recente de interações e identifique padrões de comportamento dos clientes e dos atendentes humanos para auto-aprimorar o System Prompt da Liz.
+
+### 🎯 FOCO DA ANÁLISE:
+1. **COMO NOSSOS CLIENTES CONVERSAM**:
+   - Qual vocabulário utilizam? (gírias, termos técnicos, informalidade, etc.)
+   - Quais as maiores dúvidas, inseguranças, objeções de preços ou prazos de entrega que eles trazem nas mensagens?
+   - O que eles mais priorizam ao fazer um pedido?
+2. **COMO OS ATENDENTES RESPONDEM**:
+   - Qual o tom de voz e abordagem comercial que os atendentes humanos usam para engajar o cliente?
+   - Quais soluções, explicações técnicas (sobre sublimação, tecidos, bordados, vetorização) e flexibilidades de negociação os atendentes utilizam que deram certo?
+3. **OPORTUNIDADES DE MELHORIA**:
+   - Como podemos atualizar as instruções de sistema para que a Liz converse de forma mais natural (alinhada à linguagem dos clientes) e use as mesmas estratégias comerciais de sucesso dos atendentes reais?
+
 Gere de 1 a 3 sugestões concretas, curtas e acionáveis de melhoria para o System Prompt da assistente.
 
-Exemplos de boas sugestões:
-- "Incluir informação de que Silk-Screen exige no mínimo 20 peças."
-- "Adicionar que aceitamos pagamentos via PIX ou faturamento em 2x."
-- "Esclarecer que o prazo de confecção para moletons é de 15 dias úteis."
+Exemplos de sugestões bem formuladas:
+- "Incluir informação de que Silk-Screen exige no mínimo 20 peças para alinhar com o padrão que os atendentes exigem."
+- "Mudar tom de voz para responder com a mesma cordialidade rápida de 'Boa tarde!' e emojis acolhedores que os clientes usam."
+- "Esclarecer que aceitamos sinal de 50% PIX e o restante na expedição, facilitando a negociação comercial."
 
 Retorne APENAS um JSON válido no formato abaixo, sem markdown ou explicações:
 {
@@ -42,7 +54,7 @@ Retorne APENAS um JSON válido no formato abaixo, sem markdown ou explicações:
   ]
 }
 
-HISTÓRICO RECENTE:
+HISTÓRICO RECENTE DE INTERAÇÕES:
 ${formattedHistory}`;
 
   try {
@@ -171,14 +183,31 @@ export async function checkAndAutoCompilePrompt(): Promise<boolean> {
     const config = await prisma.agentConfig.findFirst();
     if (!config) return false;
 
+    // O auto-aprimoramento de 7 dias deve rodar apenas se o Modo de Aprendizado (Modo Observação) estiver ativo
+    if (config.observationMode !== true) {
+      return false;
+    }
+
     const lastUpdate = new Date(config.lastPromptUpdateFromSuggestions || config.createdAt);
     const now = new Date();
     const diffMs = now.getTime() - lastUpdate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (diffDays >= 7) {
-      console.log(`[Learning System] Alerta: Ciclo de 7 dias atingido (${diffDays} dias). Compilando novo system prompt de forma automática...`);
+      console.log(`[Learning System] Ciclo de 7 dias atingido (${diffDays} dias) no Modo de Aprendizado. Iniciando auto-aprimoramento...`);
+      
+      // 1. Gera as sugestões automaticamente com base no histórico de conversas observadas
+      try {
+        console.log("[Learning System] 1/2: Analisando conversas e gerando sugestões de melhoria...");
+        await generateSuggestionsFromHistory();
+      } catch (genErr: any) {
+        console.warn("[Learning System] Falha ao gerar sugestões automáticas durante o ciclo:", genErr.message);
+      }
+
+      // 2. Compila e reconstrói o prompt com base nas sugestões recém-geradas
+      console.log("[Learning System] 2/2: Compilando novo system prompt completo com as sugestões...");
       await compileSuggestionsIntoPrompt();
+      
       return true;
     }
     return false;

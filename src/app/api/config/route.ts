@@ -141,6 +141,7 @@ function sanitizeConfig(config: any) {
     visionProvider: (config as any).visionProvider || "groq",
     observationMode: Boolean((config as any).observationMode ?? false),
     securityShieldActive: Boolean((config as any).securityShieldActive ?? true),
+    whatsappProvider: (config as any).whatsappProvider || "evolution",
     isDefaultPasswordActive: !config.customPassword || config.customPassword.trim() === "",
     createdAt: config.createdAt,
     updatedAt: config.updatedAt,
@@ -210,6 +211,7 @@ export async function GET(req: Request) {
           observationMode: false,
           customPassword: "",
           securityShieldActive: true,
+          whatsappProvider: "evolution",
         },
       });
     }
@@ -272,6 +274,7 @@ export async function PUT(req: Request) {
       visionProvider: configData.visionProvider || "groq",
       observationMode: Boolean(configData.observationMode ?? false),
       securityShieldActive: Boolean(configData.securityShieldActive ?? true),
+      whatsappProvider: configData.whatsappProvider || "evolution",
     };
 
     let config = await prisma.agentConfig.findFirst();

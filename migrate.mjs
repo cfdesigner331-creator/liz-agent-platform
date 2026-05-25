@@ -81,6 +81,7 @@ try {
         "observationMode" BOOLEAN NOT NULL DEFAULT false,
         "customPassword" TEXT NOT NULL DEFAULT '',
         "securityShieldActive" BOOLEAN NOT NULL DEFAULT true,
+        "whatsappProvider" TEXT NOT NULL DEFAULT 'evolution',
         "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" DATETIME NOT NULL
       )
@@ -225,6 +226,10 @@ try {
     if (!columns.includes("securityShieldActive")) {
       console.log("[Migrate] Adicionando coluna 'securityShieldActive' à tabela AgentConfig...");
       db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "securityShieldActive" BOOLEAN NOT NULL DEFAULT true').run();
+    }
+    if (!columns.includes("whatsappProvider")) {
+      console.log("[Migrate] Adicionando coluna 'whatsappProvider' à tabela AgentConfig...");
+      db.prepare('ALTER TABLE "AgentConfig" ADD COLUMN "whatsappProvider" TEXT NOT NULL DEFAULT "evolution"').run();
     }
 
     // Message table new columns

@@ -50,6 +50,7 @@ model AgentConfig {
   observationMode       Boolean  @default(false)
   customPassword        String   @default("")
   securityShieldActive  Boolean  @default(true)
+  whatsappProvider      String   @default("evolution")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

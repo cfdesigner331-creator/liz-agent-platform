@@ -1,33 +1,133 @@
 export async function sendWhatsAppMessage(
-  wisetalkUrl: string,
-  wisetalkToken: string,
-  apiId: string,
+  provider: string,
+  baseUrl: string,
+  apiKeyOrToken: string,
+  instanceOrApiId: string,
   phone: string,
   text: string
 ): Promise<void> {
-  if (!wisetalkUrl || !wisetalkToken || !apiId) {
-    console.warn("[WiseTalk API] Configuração incompleta. Pulando envio de mensagem.");
+  const isWiseTalk = provider === "wisetalk";
+
+  if (isWiseTalk) {
+    if (!baseUrl || !apiKeyOrToken || !instanceOrApiId) {
+      console.warn("[WiseTalk API] Configuração incompleta. Pulando envio.");
+      return;
+    }
+    const cleanUrl = (baseUrl || "").trim().replace(/\/$/, "");
+    const url = `${cleanUrl}/v1/api/external/${instanceOrApiId.trim()}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKeyOrToken.trim()}`,
+        },
+        body: JSON.stringify({
+          number: phone.trim(),
+          body: text,
+          externalKey: ""
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Instabilidade na API WiseTalk (${response.status}): ${errorText}`);
+      }
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        console.error(`[WiseTalk API Error] Timeout de 8s excedido no envio para +${phone}`);
+        throw new Error("Timeout excedido na conexão com a API WiseTalk.");
+      }
+      console.error(`[WiseTalk API Error] Erro ao disparar mensagem para +${phone}:`, err.message);
+      throw err;
+    }
+  } else {
+    // Evolution API
+    if (!baseUrl || !apiKeyOrToken || !instanceOrApiId) {
+      console.warn("[Evolution API] Configuração incompleta. Pulando envio de WhatsApp.");
+      return;
+    }
+    const cleanUrl = (baseUrl || "").trim().replace(/\/$/, "");
+    const url = `${cleanUrl}/message/sendText/${instanceOrApiId.trim()}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": apiKeyOrToken.trim(),
+        },
+        body: JSON.stringify({
+          number: phone,
+          text: text,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Instabilidade na API Evolution (${response.status}): ${errorText}`);
+      }
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        console.error(`[Evolution API Error] Timeout de 8s excedido no envio para +${phone}`);
+        throw new Error("Timeout excedido na conexão com a Evolution API.");
+      }
+      console.error(`[Evolution API Error] Erro ao disparar mensagem para +${phone}:`, err.message);
+      throw err;
+    }
+  }
+}
+
+/**
+ * Envia nota de áudio (Suportado apenas no Evolution)
+ */
+export async function sendWhatsAppAudio(
+  provider: string,
+  baseUrl: string,
+  apiKeyOrToken: string,
+  instanceOrApiId: string,
+  phone: string,
+  audioBase64: string
+): Promise<void> {
+  if (provider === "wisetalk") {
+    console.log(`[WiseTalk API PTT] Áudio não suportado pela API Externa. Fallback automático para texto habilitado.`);
     return;
   }
 
-  // Sanitiza a URL removendo barras finais
-  const cleanUrl = (wisetalkUrl || "").trim().replace(/\/$/, "");
-  const url = `${cleanUrl}/v1/api/external/${apiId.trim()}`;
+  if (!baseUrl || !apiKeyOrToken || !instanceOrApiId) {
+    console.warn("[Evolution API] Configuração incompleta. Pulando envio de áudio.");
+    return;
+  }
 
+  const cleanUrl = (baseUrl || "").trim().replace(/\/$/, "");
+  const url = `${cleanUrl}/message/sendWhatsAppAudio/${instanceOrApiId.trim()}`;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${wisetalkToken.trim()}`,
+        "apikey": apiKeyOrToken.trim(),
       },
       body: JSON.stringify({
-        number: phone.trim(),
-        body: text,
-        externalKey: ""
+        number: phone,
+        audio: audioBase64,
+        delay: 1000,
       }),
       signal: controller.signal,
     });
@@ -36,54 +136,99 @@ export async function sendWhatsAppMessage(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Instabilidade na API WiseTalk (${response.status}): ${errorText}`);
+      console.warn(`[Evolution API] Falha ao enviar áudio (${response.status}): ${errorText}`);
+      throw new Error(`Falha ao enviar áudio (${response.status})`);
     }
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === "AbortError") {
-      console.error(`[WiseTalk API Error] Timeout de 8s excedido no envio para +${phone}`);
-      throw new Error("Timeout excedido na conexão com a API WiseTalk.");
+      console.error(`[Evolution API Error] Timeout de 15s ao enviar áudio para +${phone}`);
+      throw new Error("Timeout ao enviar áudio pela Evolution API.");
     }
-    console.error(`[WiseTalk API Error] Erro ao disparar mensagem para +${phone}:`, err.message);
+    console.error(`[Evolution API Error] Erro ao enviar áudio para +${phone}:`, err.message);
     throw err;
   }
 }
 
 /**
- * Nota de voz (no-op para WiseTalk)
- */
-export async function sendWhatsAppAudio(
-  wisetalkUrl: string,
-  wisetalkToken: string,
-  apiId: string,
-  phone: string,
-  audioBase64: string
-): Promise<void> {
-  console.log(`[WiseTalk API PTT] Áudio não suportado pela API Externa. Fallback automático para texto habilitado.`);
-}
-
-/**
- * Simulação de digitação (no-op para WiseTalk)
+ * Altera presença do agente (Suportado apenas no Evolution)
  */
 export async function sendWhatsAppPresence(
-  wisetalkUrl: string,
-  wisetalkToken: string,
-  apiId: string,
+  provider: string,
+  baseUrl: string,
+  apiKeyOrToken: string,
+  instanceOrApiId: string,
   phone: string,
   presence: "composing" | "recording" | "paused"
 ): Promise<void> {
-  // Omitido no WiseTalk
+  if (provider === "wisetalk") {
+    return;
+  }
+
+  if (!baseUrl || !apiKeyOrToken || !instanceOrApiId) {
+    return;
+  }
+
+  const cleanUrl = (baseUrl || "").trim().replace(/\/$/, "");
+  const url = `${cleanUrl}/chat/sendPresence/${instanceOrApiId.trim()}`;
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": apiKeyOrToken.trim(),
+      },
+      body: JSON.stringify({
+        number: phone,
+        presence: presence,
+      }),
+    });
+  } catch (err: any) {
+    console.error(`[Evolution API Error] Erro ao enviar presença (${presence}) para +${phone}:`, err.message);
+  }
 }
 
 /**
- * Marca as mensagens recebidas como lidas (no-op para WiseTalk)
+ * Marca as mensagens como lidas (Suportado apenas no Evolution)
  */
 export async function markWhatsAppMessageAsRead(
-  wisetalkUrl: string,
-  wisetalkToken: string,
-  apiId: string,
+  provider: string,
+  baseUrl: string,
+  apiKeyOrToken: string,
+  instanceOrApiId: string,
   remoteJid: string,
   messageId: string
 ): Promise<void> {
-  // Omitido no WiseTalk
+  if (provider === "wisetalk") {
+    return;
+  }
+
+  if (!baseUrl || !apiKeyOrToken || !instanceOrApiId) {
+    return;
+  }
+
+  const cleanUrl = (baseUrl || "").trim().replace(/\/$/, "");
+  const url = `${cleanUrl}/chat/markMessageAsRead/${instanceOrApiId.trim()}`;
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": apiKeyOrToken.trim(),
+      },
+      body: JSON.stringify({
+        readMessages: [
+          {
+            remoteJid: remoteJid,
+            fromMe: false,
+            id: messageId,
+          },
+        ],
+      }),
+    });
+  } catch (err: any) {
+    console.error(`[Evolution API Error] Erro ao marcar mensagem como lida:`, err.message);
+  }
 }

@@ -46,6 +46,7 @@ interface AgentConfig {
   observationMode?: boolean;
   securityShieldActive?: boolean;
   isDefaultPasswordActive?: boolean;
+  whatsappProvider?: string;
 }
 
 export default function ConfigPage() {
@@ -91,6 +92,7 @@ export default function ConfigPage() {
     groqVisionModel: "llama-3.2-11b-vision-preview",
     observationMode: false,
     securityShieldActive: true,
+    whatsappProvider: "evolution",
   });
 
   const [loading, setLoading] = useState(true);
@@ -337,7 +339,15 @@ export default function ConfigPage() {
             <i className="fa-solid fa-link"></i> Endpoint Público de Integração
           </span>
           <p className="text-xs text-[var(--text-2)] max-w-xl">
-            Configure este webhook na sua Evolution API no evento <code className="bg-[#1C1C38] px-1 rounded text-[var(--text-1)] text-[10px] font-mono">MESSAGES_UPSERT</code> para capturar interações automaticamente.
+            {(config.whatsappProvider || "evolution") === "evolution" ? (
+              <>
+                Configure este webhook na sua Evolution API no evento <code className="bg-[#1C1C38] px-1 rounded text-[var(--text-1)] text-[10px] font-mono">MESSAGES_UPSERT</code> para capturar interações automaticamente.
+              </>
+            ) : (
+              <>
+                Configure este webhook na aba de Webhook da sua API Externa no painel do CRM WiseTalk para capturar interações automaticamente.
+              </>
+            )}
           </p>
         </div>
         <div className="flex w-full md:w-auto items-center gap-2">
@@ -814,69 +824,195 @@ export default function ConfigPage() {
           </div>
         )}
 
-        {/* TAB 3: EVOLUTION CONFIGURATIONS */}
+        {/* TAB 3: EVOLUTION / CRM CONFIGURATIONS */}
         {activeTab === "evolution" && (
           <div className="space-y-6 animate-fade-up">
+            {/* Provider Selector Card */}
             <div className="card space-y-6">
               <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3">
-                Parâmetros de Conexão do CRM WiseTalk
+                Provedor de Conexão WhatsApp
+              </h3>
+              <p className="text-xs text-[var(--text-2)] leading-relaxed">
+                Escolha qual método de conexão usar para enviar e receber mensagens no WhatsApp.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => updateField("whatsappProvider", "evolution")}
+                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1.5 ${
+                    (config.whatsappProvider || "evolution") === "evolution"
+                      ? "bg-[rgba(240,160,32,0.06)] border-[rgba(240,160,32,0.35)] text-[var(--text-1)]"
+                      : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)] text-[var(--text-2)]"
+                  }`}
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <span className="font-bold text-sm flex items-center gap-2 text-[var(--text-1)]">
+                      <i className="fa-solid fa-comments text-xs"></i> Evolution API
+                    </span>
+                    {(config.whatsappProvider || "evolution") === "evolution" && (
+                      <i className="fa-solid fa-circle-check text-[var(--accent)]"></i>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                    Conexão direta premium. Suporta simulador de digitação/gravação, envio de notas de voz reais (TTS) e marcação de mensagens como lidas.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => updateField("whatsappProvider", "wisetalk")}
+                  className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex flex-col gap-1.5 ${
+                    config.whatsappProvider === "wisetalk"
+                      ? "bg-[rgba(240,160,32,0.06)] border-[rgba(240,160,32,0.35)] text-[var(--text-1)]"
+                      : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.01)] text-[var(--text-2)]"
+                  }`}
+                >
+                  <div className="flex justify-between items-center w-full">
+                    <span className="font-bold text-sm flex items-center gap-2 text-[var(--text-1)]">
+                      <i className="fa-solid fa-circle-nodes text-xs"></i> CRM WiseTalk API
+                    </span>
+                    {config.whatsappProvider === "wisetalk" && (
+                      <i className="fa-solid fa-circle-check text-[var(--accent)]"></i>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-[var(--text-3)] leading-relaxed">
+                    Integração com o CRM WiseTalk via API Externa. Mídia e áudios do cliente são processados via URL direta, mantendo as conversas pendentes no fluxo do CRM.
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Connection Parameters Card */}
+            <div className="card space-y-6">
+              <h3 className="font-[var(--font-display)] font-bold text-sm text-[var(--text-1)] border-b border-[var(--border)] pb-3">
+                {(config.whatsappProvider || "evolution") === "evolution" 
+                  ? "Parâmetros de Conexão da Evolution API" 
+                  : "Parâmetros de Conexão do CRM WiseTalk"}
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--text-2)]">
-                    WiseTalk URL Base
-                  </label>
-                  <input
-                    type="url"
-                    value={config.evolutionUrl}
-                    onChange={(e) => updateField("evolutionUrl", e.target.value)}
-                    className="field-input text-xs font-mono"
-                    placeholder="Ex: https://chat3.crmwisetalk.com.br"
-                  />
-                  <span className="text-[10px] text-[var(--text-3)]">
-                    O endereço base do seu painel do CRM WiseTalk usado para integrações.
-                  </span>
-                </div>
+                {(config.whatsappProvider || "evolution") === "evolution" ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)]">
+                        Evolution URL Base
+                      </label>
+                      <input
+                        type="url"
+                        value={config.evolutionUrl}
+                        onChange={(e) => updateField("evolutionUrl", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="Ex: https://api.suadominio.com.br"
+                        required={(config.whatsappProvider || "evolution") === "evolution"}
+                      />
+                      <span className="text-[10px] text-[var(--text-3)]">
+                        A URL base do seu servidor da Evolution API.
+                      </span>
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--text-2)]">
-                    ID da API (apiId)
-                  </label>
-                  <input
-                    type="text"
-                    value={config.instanceId}
-                    onChange={(e) => updateField("instanceId", e.target.value)}
-                    className="field-input text-xs font-mono"
-                    placeholder="Ex: 12"
-                  />
-                  <span className="text-[10px] text-[var(--text-3)]">
-                    O ID exclusivo da API Externa criado no menu de APIs do WiseTalk.
-                  </span>
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)]">
+                        Nome da Instância
+                      </label>
+                      <input
+                        type="text"
+                        value={config.instanceId}
+                        onChange={(e) => updateField("instanceId", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="Ex: MinhaInstancia"
+                        required={(config.whatsappProvider || "evolution") === "evolution"}
+                      />
+                      <span className="text-[10px] text-[var(--text-3)]">
+                        O nome exato da instância criada no seu servidor da Evolution API.
+                      </span>
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
-                    <span>Token de Integração (Bearer Token)</span>
-                    <button
-                      type="button"
-                      onClick={() => setShowEvoKey(!showEvoKey)}
-                      className="text-[10px] text-[var(--accent-text)] hover:underline"
-                    >
-                      {showEvoKey ? "Ocultar" : "Mostrar"}
-                    </button>
-                  </label>
-                  <input
-                    type={showEvoKey ? "text" : "password"}
-                    value={config.evolutionApiKey}
-                    onChange={(e) => updateField("evolutionApiKey", e.target.value)}
-                    className="field-input text-xs font-mono"
-                    placeholder="Token JWT do WiseTalk..."
-                  />
-                  <span className="text-[10px] text-[var(--text-3)]">
-                    Chave de autenticação gerada no WiseTalk para autorizar o envio de mensagens da IA.
-                  </span>
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                        <span>Chave de API (ApiKey)</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowEvoKey(!showEvoKey)}
+                          className="text-[10px] text-[var(--accent-text)] hover:underline"
+                        >
+                          {showEvoKey ? "Ocultar" : "Mostrar"}
+                        </button>
+                      </label>
+                      <input
+                        type={showEvoKey ? "text" : "password"}
+                        value={config.evolutionApiKey}
+                        onChange={(e) => updateField("evolutionApiKey", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="Ex: apikey_..."
+                        required={(config.whatsappProvider || "evolution") === "evolution"}
+                      />
+                      <span className="text-[10px] text-[var(--text-3)]">
+                        Token global ou token específico da instância na Evolution.
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)]">
+                        WiseTalk URL Base
+                      </label>
+                      <input
+                        type="url"
+                        value={config.evolutionUrl}
+                        onChange={(e) => updateField("evolutionUrl", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="Ex: https://chat3.crmwisetalk.com.br"
+                        required={config.whatsappProvider === "wisetalk"}
+                      />
+                      <span className="text-[10px] text-[var(--text-3)]">
+                        O endereço base do seu painel do CRM WiseTalk usado para integrações.
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)]">
+                        ID da API (apiId)
+                      </label>
+                      <input
+                        type="text"
+                        value={config.instanceId}
+                        onChange={(e) => updateField("instanceId", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="Ex: 12"
+                        required={config.whatsappProvider === "wisetalk"}
+                      />
+                      <span className="text-[10px] text-[var(--text-3)]">
+                        O ID exclusivo da API Externa criado no menu de APIs do WiseTalk.
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-[var(--text-2)] flex justify-between items-center">
+                        <span>Token de Integração (Bearer Token)</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowEvoKey(!showEvoKey)}
+                          className="text-[10px] text-[var(--accent-text)] hover:underline"
+                        >
+                          {showEvoKey ? "Ocultar" : "Mostrar"}
+                        </button>
+                      </label>
+                      <input
+                        type={showEvoKey ? "text" : "password"}
+                        value={config.evolutionApiKey}
+                        onChange={(e) => updateField("evolutionApiKey", e.target.value)}
+                        className="field-input text-xs font-mono"
+                        placeholder="Token JWT do WiseTalk..."
+                        required={config.whatsappProvider === "wisetalk"}
+                      />
+                      <span className="text-[10px] text-[var(--text-3)]">
+                        Chave de autenticação gerada no WiseTalk para autorizar o envio de mensagens da IA.
+                      </span>
+                    </div>
+                  </>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[var(--text-2)]">

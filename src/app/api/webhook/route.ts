@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { generateResponse } from "@/lib/openai";
-import { sendWhatsAppMessage } from "@/lib/evolution";
 import {
+  sendWhatsAppMessage,
+  sendWhatsAppPresence,
+  sendWhatsAppAudio,
+  markWhatsAppMessageAsRead
+} from "@/lib/evolution";
+import {
+  detectMediaType,
+  downloadMediaFromEvolution,
   transcribeAudio,
   analyzeImage,
   analyzeDocument,
@@ -15,48 +22,250 @@ const activeMessageIds = new Set<string>();
 export async function POST(req: Request) {
   let messageIdToClean: string | null = null;
   try {
+    // 1. Carregar configurações do banco antes de processar o webhook
+    const config = await prisma.agentConfig.findFirst();
+    if (!config || config.enabled === false) {
+      return NextResponse.json({ ok: true, ignored: "agente_desativado" });
+    }
+
+    const provider = (config as any).whatsappProvider || "evolution";
     const body = await req.json();
     const { event } = body;
 
-    // 1. Ignorar se o evento for diferente de NewMessage do WiseTalk
-    if (event !== "NewMessage") {
-      return NextResponse.json({ ok: true, ignored: "evento_nao_suportado_pela_ia" });
-    }
-
-    const message = body.message;
-    if (!message || !message.id || !message.ticketId) {
-      return NextResponse.json({ ok: true, ignored: "payload_incompleto" });
-    }
-
-    const messageId = message.id;
-
-    // 2. Ignorar mensagens enviadas por nós mesmos (evitar loops de IA)
-    if (message.fromMe === true) {
-      return NextResponse.json({ ok: true, ignored: "mensagem_propria_ignorada" });
-    }
-
-    // 3. Extrair telefone do cliente dinamicamente do payload
     let phone = "";
-    if (body.contact?.number) {
-      phone = body.contact.number;
-    } else if (body.ticket?.contact?.number) {
-      phone = body.ticket.contact.number;
-    } else if (message.contact?.number) {
-      phone = message.contact.number;
-    } else if (body.contactId) {
-      phone = String(body.contactId);
-    } else if (message.contactId) {
-      phone = String(message.contactId);
+    let messageId = "";
+    let textToSave = "";
+    let detectedMediaType = "chat";
+    let isAudioMessage = false;
+    let mediaCaption = "";
+    let remoteJid = ""; // Apenas para Evolution API
+
+    // ==========================================
+    // PARSER DUPLO: WISETALK CRM VS EVOLUTION API
+    // ==========================================
+    if (provider === "wisetalk") {
+      // 2a. Parser WiseTalk CRM
+      if (event !== "NewMessage") {
+        return NextResponse.json({ ok: true, ignored: "evento_nao_suportado_wisetalk" });
+      }
+
+      const message = body.message;
+      if (!message || !message.id || !message.ticketId) {
+        return NextResponse.json({ ok: true, ignored: "payload_incompleto_wisetalk" });
+      }
+
+      messageId = message.id;
+
+      // Ignorar respostas próprias da IA
+      if (message.fromMe === true) {
+        return NextResponse.json({ ok: true, ignored: "mensagem_propria_ignorada" });
+      }
+
+      // Extração dinâmica do telefone
+      if (body.contact?.number) {
+        phone = body.contact.number;
+      } else if (body.ticket?.contact?.number) {
+        phone = body.ticket.contact.number;
+      } else if (message.contact?.number) {
+        phone = message.contact.number;
+      } else if (body.contactId) {
+        phone = String(body.contactId);
+      } else if (message.contactId) {
+        phone = String(message.contactId);
+      }
+
+      phone = phone.replace(/[^0-9]/g, "");
+      if (!phone) {
+        return NextResponse.json({ ok: true, ignored: "telefone_nao_identificado_wisetalk" });
+      }
+
+      textToSave = (message.body || "").trim();
+      detectedMediaType = message.mediaType || "chat";
+      isAudioMessage = detectedMediaType === "audio";
+
+      // Download de mídia direto por link HTTP no WiseTalk
+      if (message.mediaUrl && message.mediaUrl.trim() !== "" && (config.geminiApiKey || config.openaiApiKey || config.groqApiKey)) {
+        try {
+          console.log(`[Webhook WiseTalk] Baixando mídia (${detectedMediaType}) via link: ${message.mediaUrl}`);
+          const mediaRes = await fetch(message.mediaUrl);
+          if (mediaRes.ok) {
+            const arrayBuffer = await mediaRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64 = buffer.toString("base64");
+            const mimetype = mediaRes.headers.get("content-type") || "";
+
+            if (detectedMediaType === "audio") {
+              mediaCaption = await transcribeAudio(base64, mimetype, config);
+              console.log(`[Webhook WiseTalk] Transcrição: ${mediaCaption.substring(0, 80)}...`);
+            } else if (detectedMediaType === "image") {
+              mediaCaption = await analyzeImage(base64, mimetype, message.caption || "", config);
+            } else if (detectedMediaType === "document") {
+              mediaCaption = await analyzeDocument(base64, mimetype, message.originalName || "", config);
+            }
+          }
+        } catch (mediaErr: any) {
+          console.error("[Webhook WiseTalk] Falha ao processar mídia externa:", mediaErr.message);
+        }
+      }
+
+      // Formatar texto final do usuário com base no processamento de mídia
+      if (detectedMediaType === "audio" && mediaCaption) {
+        textToSave = mediaCaption;
+      } else if (detectedMediaType === "image" && mediaCaption) {
+        const userCaption = message.caption ? `"${message.caption}" ` : "";
+        textToSave = userCaption + `[Imagem enviada]`;
+      } else if (detectedMediaType === "document" && mediaCaption) {
+        const userCaption = message.originalName ? `"${message.originalName}" ` : "";
+        textToSave = `[Documento: ${userCaption}]`;
+      }
+
+    } else {
+      // 2b. Parser Evolution API
+      if (event !== "messages.upsert") {
+        return NextResponse.json({ ok: true, ignored: "evento_nao_suportado_evolution" });
+      }
+
+      const data = body.data;
+      if (!data || !data.key || !data.key.remoteJid || !data.key.id) {
+        return NextResponse.json({ ok: true, ignored: "payload_incompleto_evolution" });
+      }
+
+      const { remoteJid: evoJid, fromMe, id: evoMsgId } = data.key;
+      messageId = evoMsgId;
+      remoteJid = evoJid;
+
+      // Tratar mensagens enviadas por nós mesmos / atendentes humanos diretamente na Evolution API
+      if (fromMe === true) {
+        const existingMsg = await prisma.message.findUnique({
+          where: { id: messageId }
+        });
+        if (existingMsg) {
+          return NextResponse.json({ ok: true, ignored: "mensagem_propria_ja_salva" });
+        }
+
+        const phoneFromEvo = remoteJid.replace("@s.whatsapp.net", "");
+        let conversation = await prisma.conversation.findFirst({
+          where: { source: "whatsapp", phone: phoneFromEvo },
+        });
+        if (!conversation) {
+          conversation = await prisma.conversation.create({
+            data: { source: "whatsapp", phone: phoneFromEvo },
+          });
+        }
+
+        const messageContent = data.message;
+        let agentMessageText = "";
+        if (messageContent) {
+          if (messageContent.conversation) {
+            agentMessageText = messageContent.conversation;
+          } else if (messageContent.extendedTextMessage?.text) {
+            agentMessageText = messageContent.extendedTextMessage.text;
+          } else if (messageContent.imageMessage) {
+            agentMessageText = messageContent.imageMessage.caption || "[Imagem enviada pelo atendente]";
+          } else if (messageContent.videoMessage) {
+            agentMessageText = messageContent.videoMessage.caption || "[Vídeo enviado pelo atendente]";
+          } else if (messageContent.audioMessage) {
+            agentMessageText = "[Áudio enviado pelo atendente]";
+          } else if (messageContent.documentMessage) {
+            agentMessageText = messageContent.documentMessage.title ? `[Documento: ${messageContent.documentMessage.title}]` : "[Documento enviado pelo atendente]";
+          } else {
+            const keys = Object.keys(messageContent);
+            const typeName = keys.length > 0 ? keys[0] : "";
+            if (typeName) {
+              agentMessageText = `[Mensagem tipo ${typeName} enviada pelo atendente]`;
+            }
+          }
+        }
+
+        if (agentMessageText.trim()) {
+          await prisma.message.create({
+            data: {
+              id: messageId,
+              conversationId: conversation.id,
+              role: "model",
+              content: agentMessageText.trim(),
+            },
+          });
+          await prisma.conversation.update({
+            where: { id: conversation.id },
+            data: { updatedAt: new Date() },
+          });
+        }
+        return NextResponse.json({ ok: true, saved: "mensagem_atendente_humano" });
+      }
+
+      // Ignorar grupos no padrão Evolution
+      if (remoteJid.includes("@g.us")) {
+        return NextResponse.json({ ok: true, ignored: "mensagem_grupo" });
+      }
+
+      phone = remoteJid.replace("@s.whatsapp.net", "");
+      const messageContent = data.message;
+
+      // Detectar mídia
+      const mediaInfo = detectMediaType(messageContent || {});
+      detectedMediaType = mediaInfo.type || "chat";
+      isAudioMessage = detectedMediaType === "audio";
+
+      let userMessageText = "";
+      if (messageContent) {
+        if (messageContent.conversation) {
+          userMessageText = messageContent.conversation;
+        } else if (messageContent.extendedTextMessage?.text) {
+          userMessageText = messageContent.extendedTextMessage.text;
+        }
+      }
+
+      // Download de mídia do Evolution usando a Chave de API
+      if (mediaInfo.type && (config.geminiApiKey || config.openaiApiKey || config.groqApiKey)) {
+        try {
+          console.log(`[Webhook Evolution] Mídia detectada: ${mediaInfo.type}`);
+          const mediaData = await downloadMediaFromEvolution(
+            config.evolutionUrl,
+            config.evolutionApiKey,
+            config.instanceId,
+            data.key
+          );
+
+          if (mediaData) {
+            if (mediaInfo.type === "audio") {
+              mediaCaption = await transcribeAudio(mediaData.base64, mediaData.mimetype, config);
+              console.log(`[Webhook Evolution] Transcrição: ${mediaCaption.substring(0, 80)}...`);
+            } else if (mediaInfo.type === "image") {
+              mediaCaption = await analyzeImage(mediaData.base64, mediaData.mimetype, mediaInfo.caption, config);
+            } else if (mediaInfo.type === "document") {
+              mediaCaption = await analyzeDocument(mediaData.base64, mediaData.mimetype, mediaInfo.title, config);
+            }
+          }
+        } catch (mediaErr: any) {
+          console.error("[Webhook Evolution] Falha ao processar mídia interna:", mediaErr.message);
+        }
+      }
+
+      // Formatar texto final do usuário com base no processamento de mídia
+      textToSave = userMessageText.trim();
+      if (mediaInfo.type === "audio" && mediaCaption) {
+        textToSave = mediaCaption;
+      } else if (mediaInfo.type === "image" && mediaCaption) {
+        const userCaption = mediaInfo.caption ? `"${mediaInfo.caption}" ` : "";
+        textToSave = userCaption + `[Imagem enviada]`;
+      } else if (mediaInfo.type === "document" && mediaCaption) {
+        const userCaption = mediaInfo.title ? `"${mediaInfo.title}" ` : "";
+        textToSave = `[Documento: ${userCaption}]`;
+      }
     }
 
-    phone = phone.replace(/[^0-9]/g, "");
-    if (!phone) {
-      return NextResponse.json({ ok: true, ignored: "telefone_nao_identificado" });
+    // ==========================================
+    // PROCESSAMENTO COMUM DA MENSAGEM (IA & DB)
+    // ==========================================
+
+    // Se completamente vazio após processamento, ignora
+    if (!textToSave && !mediaCaption) {
+      return NextResponse.json({ ok: true, ignored: "mensagem_sem_conteudo" });
     }
 
-    // 3.1. Evitar duplicados (Desduplicação e Idempotência)
+    // Evitar duplicados (Desduplicação e Idempotência)
     if (activeMessageIds.has(messageId)) {
-      console.log(`[Webhook WiseTalk] Ignorando mensagem concorrente (in-flight): ${messageId}`);
       return NextResponse.json({ ok: true, ignored: "duplicado_in_flight", messageId });
     }
 
@@ -64,7 +273,6 @@ export async function POST(req: Request) {
       where: { id: messageId }
     });
     if (existingMsg) {
-      console.log(`[Webhook WiseTalk] Ignorando mensagem duplicada (no banco): ${messageId}`);
       return NextResponse.json({ ok: true, ignored: "duplicado_db", messageId });
     }
 
@@ -76,15 +284,7 @@ export async function POST(req: Request) {
       activeMessageIds.clear();
     }
 
-    const textToSave = (message.body || "").trim();
-
-    // 4. Carregar configurações do WiseTalk
-    const config = await prisma.agentConfig.findFirst();
-    if (!config || config.enabled === false) {
-      return NextResponse.json({ ok: true, ignored: "agente_desativado" });
-    }
-
-    // 5. Verificar allowedPhones se configurado
+    // Verificar allowedPhones
     if (config.allowedPhones && config.allowedPhones.trim() !== "") {
       const allowedList = config.allowedPhones
         .split(",")
@@ -96,52 +296,19 @@ export async function POST(req: Request) {
       }
     }
 
-    // 6. Se houver mídia — baixar pela URL e processar com a IA
-    let mediaCaption = "";
-    let detectedMediaType = message.mediaType || "chat";
-    let isAudioMessage = detectedMediaType === "audio";
-
-    if (message.mediaUrl && message.mediaUrl.trim() !== "" && (config.geminiApiKey || config.openaiApiKey || config.groqApiKey)) {
-      try {
-        console.log(`[Webhook WiseTalk] Baixando mídia (${detectedMediaType}): ${message.mediaUrl}`);
-        const mediaRes = await fetch(message.mediaUrl);
-        if (mediaRes.ok) {
-          const arrayBuffer = await mediaRes.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const base64 = buffer.toString("base64");
-          const mimetype = mediaRes.headers.get("content-type") || "";
-
-          if (detectedMediaType === "audio") {
-            mediaCaption = await transcribeAudio(base64, mimetype, config);
-            console.log(`[Webhook WiseTalk] Transcrição: ${mediaCaption.substring(0, 80)}...`);
-          } else if (detectedMediaType === "image") {
-            mediaCaption = await analyzeImage(base64, mimetype, message.caption || "", config);
-          } else if (detectedMediaType === "document") {
-            mediaCaption = await analyzeDocument(base64, mimetype, message.originalName || "", config);
-          }
-        }
-      } catch (mediaErr: any) {
-        console.error("[Webhook WiseTalk] Falha ao processar mídia:", mediaErr.message);
-      }
+    // Iniciar simulação de digitação imediata no provedor compatível (Evolution)
+    if (provider === "evolution" && config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
+      await sendWhatsAppPresence(
+        provider,
+        config.evolutionUrl,
+        config.evolutionApiKey,
+        config.instanceId,
+        remoteJid,
+        "composing"
+      );
     }
 
-    // 7. Montar texto final do usuário para a IA
-    let effectiveUserText = textToSave;
-    if (detectedMediaType === "audio" && mediaCaption) {
-      effectiveUserText = mediaCaption;
-    } else if (detectedMediaType === "image" && mediaCaption) {
-      const userCaption = message.caption ? `"${message.caption}" ` : "";
-      effectiveUserText = userCaption + `[Imagem enviada]`;
-    } else if (detectedMediaType === "document" && mediaCaption) {
-      const userCaption = message.originalName ? `"${message.originalName}" ` : "";
-      effectiveUserText = `[Documento: ${userCaption}]`;
-    }
-
-    if (!effectiveUserText && !mediaCaption) {
-      return NextResponse.json({ ok: true, ignored: "mensagem_sem_conteudo" });
-    }
-
-    // 8. Criar ou buscar conversa
+    // Buscar ou criar conversa
     let conversation = await prisma.conversation.findFirst({
       where: { source: "whatsapp", phone },
     });
@@ -151,25 +318,25 @@ export async function POST(req: Request) {
       });
     }
 
-    // 9. Salvar mensagem do usuário
+    // Salvar mensagem do usuário
     await prisma.message.create({
       data: {
         id: messageId,
         conversationId: conversation.id,
         role: "user",
-        content: effectiveUserText || "[mídia sem texto]",
+        content: textToSave || "[mídia sem texto]",
         mediaType: detectedMediaType,
         mediaCaption: mediaCaption || null,
       },
     });
 
-    // 10. Verificar se o Modo Treinamento (Modo Observação) está ativo
+    // Verificar se o Modo Treinamento (Modo Observação) está ativo
     if (config.observationMode === true) {
-      console.log(`[Webhook WiseTalk] Modo Treinamento ativo. Mensagem de +${phone} salva silenciosamente.`);
+      console.log(`[Webhook Dual] Agente em Modo Observação. Mensagem salva silenciosamente no banco.`);
       return NextResponse.json({ ok: true, ignored: "modo_observacao_ativo" });
     }
 
-    // 11. Verificar se a conversa possui triagem concluída
+    // Verificar se a conversa já está encerrada (triagem concluída)
     const summaryMessage = await prisma.message.findFirst({
       where: {
         conversationId: conversation.id,
@@ -185,11 +352,11 @@ export async function POST(req: Request) {
     });
 
     if (summaryMessage) {
-      console.log(`[Webhook WiseTalk] Triagem já concluída para +${phone}. IA silenciosa.`);
+      console.log(`[Webhook Dual] Triagem já concluída para +${phone}. IA silenciosa.`);
       return NextResponse.json({ ok: true, ignored: "conversa_encerrada_triagem_concluida" });
     }
 
-    // 12. Horário de Atendimento (Schedule)
+    // Verificar Horário de Atendimento (Schedule)
     if (config.scheduleEnabled) {
       const timezone = config.scheduleTimezone || "America/Sao_Paulo";
       let nowInTz: Date;
@@ -206,7 +373,7 @@ export async function POST(req: Request) {
         const second = getVal("second");
         nowInTz = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
       } catch (err) {
-        console.error("[Webhook WiseTalk] Erro no fuso horário, usando hora local:", err);
+        console.error("[Webhook Dual] Erro ao computar fuso horário:", err);
         nowInTz = new Date();
       }
 
@@ -221,7 +388,7 @@ export async function POST(req: Request) {
         const isWeekday = currentDay >= 1 && currentDay <= 5;
         const isTimeAuthorized = currentTimeMinutes >= 12 * 60;
         if (!isWeekday || !isTimeAuthorized) {
-          console.log(`[Webhook WiseTalk] Silenciador de Plantão ativo para +${phone}.`);
+          console.log(`[Webhook Dual] Silenciador de Plantão: Fora do período autorizado.`);
           return NextResponse.json({ ok: true, ignored: "plantao_inteligente_fora_do_periodo_autorizado" });
         }
       } else {
@@ -229,7 +396,7 @@ export async function POST(req: Request) {
         try {
           allowedDays = JSON.parse(config.scheduleDays || "[1,2,3,4,5]");
         } catch (e) {
-          console.error("[Webhook WiseTalk] Erro ao parsear scheduleDays:", e);
+          console.error("[Webhook Dual] Erro ao parsear scheduleDays:", e);
         }
 
         let startMinutes = 8 * 60;
@@ -248,12 +415,13 @@ export async function POST(req: Request) {
         const isTimeAllowed = currentTimeMinutes >= startMinutes && currentTimeMinutes <= endMinutes;
 
         if (!isDayAllowed || !isTimeAllowed) {
-          console.log(`[Webhook WiseTalk] Fora do expediente comercial. Enviando resposta de ausência.`);
+          console.log(`[Webhook Dual] Fora do expediente comercial. Enviando resposta de ausência.`);
           await sendWhatsAppMessage(
+            provider,
             config.evolutionUrl,
             config.evolutionApiKey,
             config.instanceId,
-            phone,
+            provider === "evolution" ? remoteJid : phone,
             config.scheduleOffMessage || "Olá! No momento estou fora do horário de atendimento. Em breve retornarei! 😊"
           );
           return NextResponse.json({ ok: true, ignored: "fora_de_horario" });
@@ -261,7 +429,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 13. Buscar histórico para contexto da IA
+    // Buscar histórico para contexto da IA
     const historyLimit = config.historyLimit || 10;
     const dbMessages = await prisma.message.findMany({
       where: { conversationId: conversation.id },
@@ -274,7 +442,7 @@ export async function POST(req: Request) {
       content: msg.content,
     }));
 
-    // Contexto de tempo da IA
+    // Injetar contexto de Data/Hora
     const timezone = config.scheduleTimezone || "America/Sao_Paulo";
     let nowInTz = new Date();
     try {
@@ -289,9 +457,7 @@ export async function POST(req: Request) {
       const minute = getVal("minute");
       const second = getVal("second");
       nowInTz = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
-    } catch (err) {
-      console.error("[Webhook WiseTalk] Erro no fuso horário para a IA:", err);
-    }
+    } catch (err) {}
 
     const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
     const diaNome = diasSemana[nowInTz.getDay()];
@@ -313,7 +479,7 @@ export async function POST(req: Request) {
       systemPromptWithMedia += `\n\n[CONTEXTO DE MÍDIA — ${mediaLabel.toUpperCase()} RECEBIDA]\n${mediaCaption}\n[FIM DO CONTEXTO]`;
     }
 
-    // 14. Gerar resposta com IA
+    // Gerar resposta da IA
     let aiResult: { content: string; tokens: number } | null = null;
     try {
       aiResult = await generateResponse(
@@ -332,9 +498,9 @@ export async function POST(req: Request) {
         }
       );
     } catch (firstErr: any) {
-      console.warn(`[Webhook WiseTalk] Falha no provedor principal (${config.aiProvider}):`, firstErr.message);
+      console.warn(`[Webhook Dual] Falha no provedor principal (${config.aiProvider}):`, firstErr.message);
 
-      // Fallback Groq/OpenAI
+      // Fallback
       if (config.aiProvider === "gemini") {
         if (config.groqApiKey && config.groqApiKey.trim() !== "") {
           try {
@@ -386,13 +552,13 @@ export async function POST(req: Request) {
 
       if (!aiResult) {
         aiResult = {
-          content: "Olá! Desculpe o transtorno, mas meu sistema de inteligência artificial está passando por uma oscilação temporária. Por favor, tente enviar sua mensagem novamente em alguns instantes. 🙏",
+          content: "Olá! Desculpe o transtorno, mas meu sistema está passando por uma oscilação rápida. Por favor, tente novamente em alguns instantes. 🙏",
           tokens: 0
         };
       }
     }
 
-    // 15. Salvar resposta da IA no banco
+    // Salvar resposta da IA no banco
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
@@ -407,55 +573,133 @@ export async function POST(req: Request) {
       data: { updatedAt: new Date() },
     });
 
-    // 16. Enviar resposta dividida por parágrafos para o WiseTalk
-    const splitResponseIntoParagraphs = (text: string): string[] => {
-      if (!text) return [];
-      const paragraphs = text
-        .split(/\n\n+/)
-        .map(p => p.trim())
-        .filter(Boolean);
+    // Enviar resposta utilizando o provedor parametrizado
+    if (config.evolutionUrl && config.evolutionApiKey && config.instanceId) {
+      const audioMode = (config as any).audioResponseMode || "on_audio";
+      const shouldSendAudio =
+        audioMode === "always" ||
+        (audioMode === "on_audio" && isAudioMessage);
 
-      if (paragraphs.length <= 1) {
-        const single = text.trim();
-        if (single.length > 500) {
-          return single
-            .split(/\n+/)
-            .map(p => p.trim())
-            .filter(Boolean);
+      let audioSent = false;
+      const hasTtsCredentials = 
+        (config.ttsProvider === "cartesia" && config.cartesiaApiKey) ||
+        (config.ttsProvider !== "cartesia" && config.geminiApiKey);
+
+      // NOTA DE VOZ (Suportado apenas para Evolution API)
+      if (provider === "evolution" && shouldSendAudio && hasTtsCredentials) {
+        try {
+          await sendWhatsAppPresence(
+            provider,
+            config.evolutionUrl,
+            config.evolutionApiKey,
+            config.instanceId,
+            remoteJid,
+            "recording"
+          );
+
+          const audioBase64 = await generateSpeech(aiResult.content, config);
+
+          if (audioBase64) {
+            await sendWhatsAppAudio(
+              provider,
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              audioBase64
+            );
+            audioSent = true;
+
+            await markWhatsAppMessageAsRead(
+              provider,
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              messageId
+            );
+          }
+        } catch (ttsErr: any) {
+          console.warn("[Webhook Dual] Falha no TTS de áudio, fazendo fallback para texto:", ttsErr.message);
         }
       }
-      return paragraphs;
-    };
 
-    const textChunks = splitResponseIntoParagraphs(aiResult.content);
-    console.log(`[Webhook WiseTalk] Enviando ${textChunks.length} mensagens parceladas.`);
+      // Enviar via Texto (Evolution API ou WiseTalk CRM)
+      if (!audioSent) {
+        const splitResponseIntoParagraphs = (text: string): string[] => {
+          if (!text) return [];
+          const paragraphs = text
+            .split(/\n\n+/)
+            .map(p => p.trim())
+            .filter(Boolean);
 
-    for (let i = 0; i < textChunks.length; i++) {
-      // Simulação de digitação (delay proporcional de 1.5s a 4s)
-      const typingMs = Math.min(4000, Math.max(1500, textChunks[i].length * 20));
-      await new Promise(resolve => setTimeout(resolve, typingMs));
+          if (paragraphs.length <= 1) {
+            const single = text.trim();
+            if (single.length > 500) {
+              return single
+                .split(/\n+/)
+                .map(p => p.trim())
+                .filter(Boolean);
+            }
+          }
+          return paragraphs;
+        };
 
-      let chunkToSend = textChunks[i];
-      if (i === 0 && config.textTitleEnabled && config.textTitle) {
-        chunkToSend = `*${config.textTitle.trim()}*\n\n${chunkToSend}`;
+        const textChunks = splitResponseIntoParagraphs(aiResult.content);
+        console.log(`[Webhook Dual] Enviando ${textChunks.length} mensagens parceladas.`);
+        
+        for (let i = 0; i < textChunks.length; i++) {
+          if (provider === "evolution") {
+            await sendWhatsAppPresence(
+              provider,
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              "composing"
+            );
+          }
+
+          const typingMs = Math.min(4000, Math.max(1500, textChunks[i].length * 20));
+          await new Promise(resolve => setTimeout(resolve, typingMs));
+
+          let chunkToSend = textChunks[i];
+          if (i === 0 && config.textTitleEnabled && config.textTitle) {
+            chunkToSend = `*${config.textTitle.trim()}*\n\n${chunkToSend}`;
+          }
+
+          await sendWhatsAppMessage(
+            provider,
+            config.evolutionUrl,
+            config.evolutionApiKey,
+            config.instanceId,
+            provider === "evolution" ? remoteJid : phone,
+            chunkToSend
+          );
+
+          if (i === 0 && provider === "evolution") {
+            await markWhatsAppMessageAsRead(
+              provider,
+              config.evolutionUrl,
+              config.evolutionApiKey,
+              config.instanceId,
+              remoteJid,
+              messageId
+            );
+          }
+
+          if (i < textChunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 800));
+          }
+        }
       }
-
-      await sendWhatsAppMessage(
-        config.evolutionUrl,
-        config.evolutionApiKey,
-        config.instanceId,
-        phone,
-        chunkToSend
-      );
-
-      if (i < textChunks.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-      }
+    } else {
+      console.warn("[Webhook Dual] Configurações de API incompletas. Mensagem da IA não enviada.");
     }
 
     return NextResponse.json({ ok: true });
   } catch (err: any) {
-    console.error("[Webhook WiseTalk Error] Falha no webhook:", err.message);
+    console.error("[Webhook Dual Error] Falha crítica:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   } finally {
     if (messageIdToClean) {

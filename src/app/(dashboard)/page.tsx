@@ -173,7 +173,7 @@ export default function PlaygroundPage() {
   return (
     <div className="flex-1 flex h-full min-h-0">
       {/* Simulation History Sidebar */}
-      <div className="w-80 border-r border-[var(--border)] bg-[rgba(13,13,28,0.35)] flex flex-col shrink-0">
+      <div className="w-80 border-r border-[var(--border)] bg-[var(--surface)]/40 flex flex-col shrink-0">
         <div className="p-4 border-b border-[var(--border)] flex justify-between items-center gap-2">
           <h3 className="font-[var(--font-display)] font-bold text-sm tracking-wide text-[var(--text-1)] uppercase">
             Simulações
@@ -213,8 +213,8 @@ export default function PlaygroundPage() {
                   onClick={() => selectConversation(conv)}
                   className={`w-full text-left p-3 rounded-xl border transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? "bg-[rgba(240,160,32,0.06)] border-[rgba(240,160,32,0.2)] text-[var(--text-1)]"
-                      : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.02)] text-[var(--text-2)]"
+                      ? "bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--text-1)]"
+                      : "bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                   }`}
                 >
                   <div className="flex justify-between items-start gap-2 mb-1">
@@ -231,7 +231,7 @@ export default function PlaygroundPage() {
                   <p className="text-xs text-[var(--text-2)] truncate line-clamp-1">
                     {lastMsg ? lastMsg.content : "Sem mensagens ainda..."}
                   </p>
-                  <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-[rgba(255,255,255,0.03)] text-[10px]">
+                  <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-[var(--border)]/30 text-[10px]">
                     <span className="text-[var(--text-3)]">
                       {conv.messages.length} mensagens
                     </span>
@@ -250,9 +250,9 @@ export default function PlaygroundPage() {
       </div>
 
       {/* Main Interactive Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#06060c]">
+      <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg)]">
         {/* Chat Header */}
-        <div className="px-6 py-4 border-b border-[var(--border)] bg-[#080814] flex justify-between items-center gap-4 shrink-0">
+        <div className="px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)] flex justify-between items-center gap-4 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-[var(--ai-dim)] border border-[var(--ai-border)] flex items-center justify-center text-[var(--ai)]">
               <i className="fa-solid fa-robot text-lg"></i>
@@ -317,7 +317,7 @@ export default function PlaygroundPage() {
                     <button
                       key={idx}
                       onClick={() => handleSendMessage(chip)}
-                      className="p-3 text-left rounded-xl border border-[var(--border)] bg-[#0a0a14] text-xs font-semibold text-[var(--text-2)] hover:text-[var(--text-1)] hover:border-[var(--accent)] hover:bg-[rgba(240,160,32,0.02)] transition-all cursor-pointer group flex justify-between items-center"
+                      className="p-3 text-left rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-xs font-semibold text-[var(--text-2)] hover:text-[var(--text-1)] hover:border-[var(--accent)] hover:bg-[var(--accent-dim)] transition-all cursor-pointer group flex justify-between items-center"
                     >
                       <span className="truncate">{chip}</span>
                       <i className="fa-solid fa-arrow-right text-[10px] text-[var(--text-3)] group-hover:text-[var(--accent)] transition-colors ml-2"></i>
@@ -348,7 +348,7 @@ export default function PlaygroundPage() {
                       <div
                         className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-semibold ${
                           isUser
-                            ? "bg-[#1C1C38] text-[var(--text-2)] border border-[var(--border)]"
+                            ? "bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]"
                             : "bg-[var(--ai-dim)] text-[var(--ai)] border border-[var(--ai-border)]"
                         }`}
                       >
@@ -360,8 +360,8 @@ export default function PlaygroundPage() {
                         <div
                           className={`rounded-2xl px-4 py-3 border text-sm leading-relaxed whitespace-pre-wrap ${
                             isUser
-                              ? "bg-[#090918] border-[var(--border-2)] text-[var(--text-1)]"
-                              : "bg-[rgba(13,13,28,0.7)] border-[var(--border)] text-[var(--text-1)] shadow-md"
+                              ? "bg-[var(--surface-2)] border-[var(--border-2)] text-[var(--text-1)]"
+                              : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-1)] shadow-md"
                           }`}
                         >
                           {msg.content}
@@ -386,7 +386,7 @@ export default function PlaygroundPage() {
                     L
                   </div>
                   <div className="flex flex-col">
-                    <div className="rounded-2xl px-4 py-3 border border-[var(--border)] bg-[rgba(13,13,28,0.7)] flex items-center justify-center">
+                    <div className="rounded-2xl px-4 py-3 border border-[var(--border)] bg-[var(--surface)] flex items-center justify-center">
                       <span className="dot-pulse">
                         <span></span>
                         <span></span>
@@ -405,7 +405,7 @@ export default function PlaygroundPage() {
         </div>
 
         {/* Message Input Area */}
-        <div className="p-4 border-t border-[var(--border)] bg-[#070712] shrink-0">
+        <div className="p-4 border-t border-[var(--border)] bg-[var(--surface)] shrink-0">
           <div className="max-w-3xl mx-auto">
             {/* suggestions inline bar if chat is active but has very few messages */}
             {activeChat && activeChat.messages.length < 3 && !sending && (
@@ -417,7 +417,7 @@ export default function PlaygroundPage() {
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(chip)}
-                    className="px-2.5 py-1.5 rounded-full border border-[var(--border)] bg-[#0b0b18] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[10px] font-semibold text-[var(--text-2)] cursor-pointer transition-all"
+                    className="px-2.5 py-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--accent)] hover:text-[var(--accent)] text-[10px] font-semibold text-[var(--text-2)] cursor-pointer transition-all"
                   >
                     {chip}
                   </button>
@@ -430,7 +430,7 @@ export default function PlaygroundPage() {
                 e.preventDefault();
                 handleSendMessage(inputMessage);
               }}
-              className="flex gap-2.5 items-center bg-[#0d0d1c] border border-[var(--border)] rounded-xl p-1.5 focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent-dim)] transition-all"
+              className="flex gap-2.5 items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-1.5 focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent-dim)] transition-all"
             >
               <input
                 type="text"

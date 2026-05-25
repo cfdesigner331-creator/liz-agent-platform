@@ -79,9 +79,9 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-80 border-r border-[var(--border)] bg-[#070712] flex flex-col shrink-0 h-screen sticky top-0 overflow-y-auto z-10">
+    <aside className="w-80 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col shrink-0 h-screen sticky top-0 overflow-y-auto z-10">
       {/* Brand Header */}
-      <div className="p-6 border-b border-[var(--border)] bg-[#070712]/50 backdrop-blur-md">
+      <div className="p-6 border-b border-[var(--border)] bg-[var(--surface)]/50 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] text-[var(--accent)] font-[var(--font-display)] font-extrabold text-xl shadow-[0_0_15px_rgba(var(--accent-rgb),0.15)] transition-all duration-300 hover:scale-105">
             AP
@@ -117,7 +117,7 @@ export default function Sidebar() {
                 className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 transition-all duration-300 ${
                   isActive
                     ? "bg-[var(--accent-dim)] text-[var(--accent)]"
-                    : "bg-[#101024] text-[var(--text-3)] group-hover:text-[var(--text-2)] group-hover:bg-[#14142d]"
+                    : "bg-[var(--surface-2)] text-[var(--text-3)] group-hover:text-[var(--text-2)] group-hover:bg-[var(--surface-3)]"
                 }`}
               >
                 <IconComponent className="w-5 h-5" />
@@ -136,8 +136,8 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer Profile / Logout */}
-      <div className="p-4 border-t border-[var(--border)] bg-[#05050f] mt-auto">
-        <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-[rgba(13,13,28,0.4)] border border-[var(--border)] mb-3">
+      <div className="p-4 border-t border-[var(--border)] bg-[var(--surface)] mt-auto">
+        <div className="flex items-center justify-between gap-3 p-2 rounded-lg bg-[var(--surface-2)]/40 border border-[var(--border)] mb-3">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 rounded-full bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center text-xs font-bold text-[var(--accent)]">
               AP

@@ -89,7 +89,7 @@ export default function ConfigPage() {
     transcriptionProvider: "groq",
     visionProvider: "groq",
     groqTranscriptionModel: "whisper-large-v3-turbo",
-    groqVisionModel: "llama-3.2-11b-vision-preview",
+    groqVisionModel: "llama-3.2-11b-vision-instruct",
     observationMode: false,
     securityShieldActive: true,
     whatsappProvider: "evolution",
@@ -1581,7 +1581,7 @@ export default function ConfigPage() {
                               value={config.groqVisionModel || ""}
                               onChange={(e) => updateField("groqVisionModel", e.target.value)}
                               className="field-input text-xs font-mono"
-                              placeholder="llama-3.2-11b-vision-preview"
+                              placeholder="llama-3.2-11b-vision-instruct"
                             />
                           </div>
                         )}

@@ -187,7 +187,7 @@ export default function ConversationsPage() {
   return (
     <div className="flex-1 flex h-full min-h-0 min-w-0">
       {/* Sidebar */}
-      <div className="w-80 border-r border-[var(--border)] bg-[rgba(13,13,28,0.35)] flex flex-col shrink-0">
+      <div className="w-80 border-r border-[var(--border)] bg-[var(--surface)]/40 flex flex-col shrink-0">
         <div className="p-4 border-b border-[var(--border)] space-y-3">
           <div className="flex justify-between items-center">
             <h3 className="font-[var(--font-display)] font-bold text-sm tracking-wide text-[var(--text-1)] uppercase">
@@ -242,8 +242,8 @@ export default function ConversationsPage() {
                   onClick={() => setActiveChat(conv)}
                   className={`w-full text-left p-3 rounded-xl border transition-all duration-200 cursor-pointer ${
                     isSelected
-                      ? "bg-[rgba(240,160,32,0.06)] border-[rgba(240,160,32,0.2)] text-[var(--text-1)]"
-                      : "bg-[#090914] border-[var(--border)] hover:bg-[rgba(255,255,255,0.02)] text-[var(--text-2)]"
+                      ? "bg-[var(--accent-dim)] border-[var(--accent-border)] text-[var(--text-1)]"
+                      : "bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--text-2)]"
                   }`}
                 >
                   <div className="flex justify-between items-start gap-2 mb-1">
@@ -257,7 +257,7 @@ export default function ConversationsPage() {
                   <p className="text-xs text-[var(--text-2)] truncate line-clamp-1">
                     {lastMsg ? lastMsg.content : "Sem mensagens..."}
                   </p>
-                  <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-[rgba(255,255,255,0.03)] text-[10px] text-[var(--text-3)]">
+                  <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-[var(--border)]/30 text-[10px] text-[var(--text-3)]">
                     <span>{conv.messages.length} mensagens</span>
                     {isSelected && (
                       <span className="text-[var(--accent)] font-semibold">Selecionado</span>
@@ -271,14 +271,14 @@ export default function ConversationsPage() {
       </div>
 
       {/* Main Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#06060c]">
+      <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg)]">
         {activeChat ? (
           <>
             {/* Header com abas */}
-            <div className="px-6 pt-4 border-b border-[var(--border)] bg-[#080814] shrink-0">
+            <div className="px-6 pt-4 border-b border-[var(--border)] bg-[var(--surface)] shrink-0">
               <div className="flex justify-between items-center gap-4 mb-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-[rgba(240,160,32,0.06)] border border-[rgba(240,160,32,0.15)] flex items-center justify-center text-[var(--accent)] font-mono font-bold text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent-border)] flex items-center justify-center text-[var(--accent)] font-mono font-bold text-sm shrink-0">
                     WA
                   </div>
                   <div className="min-w-0">
@@ -342,7 +342,7 @@ export default function ConversationsPage() {
                       >
                         <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-xs font-semibold ${
                           isUser
-                            ? "bg-[#101024] text-[var(--text-2)] border border-[var(--border)]"
+                            ? "bg-[var(--surface-3)] text-[var(--text-2)] border border-[var(--border)]"
                             : "bg-[var(--ai-dim)] text-[var(--ai)] border border-[var(--ai-border)]"
                         }`}>
                           {isUser ? <i className="fa-brands fa-whatsapp"></i> : "L"}
@@ -350,7 +350,7 @@ export default function ConversationsPage() {
 
                         <div className="flex flex-col min-w-0">
                           {/* Badge de mídia se houver */}
-                          {msg.mediaType && (
+                          {msg.mediaType && msg.mediaType !== "chat" && (
                             <div className={`inline-flex items-center gap-1 text-[10px] font-semibold mb-1 px-2 py-0.5 rounded-full w-fit ${
                               msg.mediaType === "audio" ? "bg-green-400/10 text-green-400 border border-green-400/20" :
                               msg.mediaType === "image" ? "bg-blue-400/10 text-blue-400 border border-blue-400/20" :
@@ -363,15 +363,15 @@ export default function ConversationsPage() {
 
                           <div className={`rounded-2xl px-4 py-3 border text-sm leading-relaxed whitespace-pre-wrap break-words ${
                             isUser
-                              ? "bg-[#0c0c1e] border-[var(--border-2)] text-[var(--text-1)]"
-                              : "bg-[rgba(13,13,28,0.7)] border-[var(--border)] text-[var(--text-1)] shadow-md"
+                              ? "bg-[var(--surface-2)] border-[var(--border-2)] text-[var(--text-1)]"
+                              : "bg-[var(--surface)] border-[var(--border)] text-[var(--text-1)] shadow-md"
                           }`}>
                             {msg.content}
                           </div>
 
                           {/* Contexto de mídia (transcrição/descrição) */}
                           {msg.mediaCaption && (
-                            <div className="mt-1.5 px-3 py-2 rounded-xl bg-[rgba(168,85,247,0.05)] border border-[rgba(168,85,247,0.15)] text-[10px] text-[var(--text-3)] leading-relaxed max-w-sm">
+                            <div className="mt-1.5 px-3 py-2 rounded-xl bg-[var(--accent-dim)]/30 border border-[var(--accent-border)] text-[10px] text-[var(--text-3)] leading-relaxed max-w-sm">
                               <span className="text-purple-400 font-semibold text-[9px] uppercase tracking-wide block mb-0.5">
                                 {msg.mediaType === "audio" ? "Transcrição" : msg.mediaType === "image" ? "Análise visual" : "Conteúdo do documento"}
                               </span>
@@ -407,7 +407,7 @@ export default function ConversationsPage() {
 
                   {summaryLoading && (
                     <div className="flex flex-col items-center justify-center py-16 gap-4 text-[var(--text-3)]">
-                      <div className="w-14 h-14 rounded-2xl bg-[rgba(168,85,247,0.08)] border border-[rgba(168,85,247,0.2)] flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-2xl bg-[var(--accent-dim)]/50 border border-[var(--accent-border)] flex items-center justify-center">
                         <i className="fa-solid fa-sparkles text-purple-400 text-xl animate-pulse"></i>
                       </div>
                       <div className="space-y-1 text-center">
@@ -427,7 +427,7 @@ export default function ConversationsPage() {
                   {summary && !summaryLoading && (
                     <>
                       {/* Client card */}
-                      <div className="card border-[rgba(240,160,32,0.15)] bg-[rgba(240,160,32,0.03)] space-y-4">
+                      <div className="card border-[var(--accent-border)] bg-[var(--accent-dim)]/20 space-y-4">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="text-[10px] text-[var(--text-3)] uppercase font-bold tracking-wider mb-1">Cliente</p>
@@ -533,7 +533,7 @@ export default function ConversationsPage() {
             )}
 
             {/* Bottom bar */}
-            <div className="p-3 border-t border-[var(--border)] bg-[#070712] text-center text-[10px] text-[var(--text-3)] shrink-0">
+            <div className="p-3 border-t border-[var(--border)] bg-[var(--surface)] text-center text-[10px] text-[var(--text-3)] shrink-0">
               <i className="fa-solid fa-shield-halved text-[9px] mr-1 text-[var(--success)]"></i>
               <span>Esta conversa está sendo sincronizada em tempo real via webhook Evolution API</span>
             </div>
@@ -549,7 +549,7 @@ export default function ConversationsPage() {
             <p className="text-sm text-[var(--text-2)] max-w-sm mb-6 leading-relaxed">
               Selecione uma conversa na lista à esquerda para ver o histórico ou o resumo gerado por IA.
             </p>
-            <div className="card text-left text-xs bg-[#090914] border-[var(--border)] p-4 space-y-3">
+            <div className="card text-left text-xs bg-[var(--surface-2)] border-[var(--border)] p-4 space-y-3">
               <span className="font-bold text-[var(--text-1)] uppercase tracking-wider text-[10px] flex items-center gap-1.5">
                 <i className="fa-solid fa-circle-info text-[var(--accent)]"></i> Como receber mensagens reais aqui?
               </span>

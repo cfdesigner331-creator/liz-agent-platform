@@ -325,7 +325,7 @@ export async function POST(req: Request) {
         conversationId: conversation.id,
         role: "user",
         content: textToSave || "[mídia sem texto]",
-        mediaType: detectedMediaType,
+        mediaType: detectedMediaType === "chat" ? null : detectedMediaType,
         mediaCaption: mediaCaption || null,
       },
     });

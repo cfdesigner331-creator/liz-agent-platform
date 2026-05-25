@@ -24,7 +24,7 @@ model AgentConfig {
   groqApiKey      String   @default("")
   groqModel       String   @default("llama-3.3-70b-versatile")
   groqTranscriptionModel String @default("whisper-large-v3-turbo")
-  groqVisionModel        String @default("llama-3.2-11b-vision-preview")
+  groqVisionModel        String @default("llama-3.2-11b-vision-instruct")
   geminiApiKey        String   @default("")
   geminiModel         String   @default("gemini-2.5-flash-lite")
   audioResponseMode   String   @default("on_audio")

@@ -566,7 +566,7 @@ export async function analyzeImageWithGroq(
   mimetype: string,
   caption: string,
   apiKey: string,
-  model = "llama-3.2-11b-vision-preview"
+  model = "llama-3.2-11b-vision-instruct"
 ): Promise<string> {
   const groq = new OpenAI({
     apiKey: apiKey.trim(),
@@ -686,7 +686,7 @@ export async function analyzeImage(
   for (const p of order) {
     if (p === "groq" && config.groqApiKey) {
       try {
-        return await analyzeImageWithGroq(base64, mimetype, caption, config.groqApiKey, config.groqVisionModel || "llama-3.2-11b-vision-preview");
+        return await analyzeImageWithGroq(base64, mimetype, caption, config.groqApiKey, config.groqVisionModel || "llama-3.2-11b-vision-instruct");
       } catch (err: any) {
         console.warn("[Media] Falha na análise de imagem com Groq Vision, tentando fallback...", err.message);
         lastError = err;
@@ -753,7 +753,7 @@ export async function analyzeDocument(
     for (const p of order) {
       if (p === "groq" && config.groqApiKey) {
         try {
-          return await analyzeImageWithGroq(base64, mimetype, `Documento: ${title}`, config.groqApiKey, config.groqVisionModel || "llama-3.2-11b-vision-preview");
+          return await analyzeImageWithGroq(base64, mimetype, `Documento: ${title}`, config.groqApiKey, config.groqVisionModel || "llama-3.2-11b-vision-instruct");
         } catch (err: any) {
           console.warn("[Media] Falha na análise do documento imagem com Groq Vision, tentando fallback...", err.message);
           lastError = err;

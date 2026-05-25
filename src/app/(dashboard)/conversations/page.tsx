@@ -350,7 +350,7 @@ export default function ConversationsPage() {
 
                         <div className="flex flex-col min-w-0">
                           {/* Badge de mídia se houver */}
-                          {msg.mediaType && msg.mediaType !== "chat" && (
+                          {msg.mediaType && ["audio", "image", "document"].includes(msg.mediaType) && (
                             <div className={`inline-flex items-center gap-1 text-[10px] font-semibold mb-1 px-2 py-0.5 rounded-full w-fit ${
                               msg.mediaType === "audio" ? "bg-green-400/10 text-green-400 border border-green-400/20" :
                               msg.mediaType === "image" ? "bg-blue-400/10 text-blue-400 border border-blue-400/20" :

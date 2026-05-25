@@ -318,17 +318,17 @@ export async function POST(req: Request) {
       });
     }
 
-    // Salvar mensagem do usuário
-    await prisma.message.create({
-      data: {
-        id: messageId,
-        conversationId: conversation.id,
-        role: "user",
-        content: textToSave || "[mídia sem texto]",
-        mediaType: detectedMediaType === "chat" ? null : detectedMediaType,
-        mediaCaption: mediaCaption || null,
-      },
-    });
+     // Salvar mensagem do usuário
+     await prisma.message.create({
+       data: {
+         id: messageId,
+         conversationId: conversation.id,
+         role: "user",
+         content: textToSave || "[mídia sem texto]",
+         mediaType: ["audio", "image", "document"].includes(detectedMediaType) ? detectedMediaType : null,
+         mediaCaption: mediaCaption || null,
+       },
+     });
 
     // Verificar se o Modo Treinamento (Modo Observação) está ativo
     if (config.observationMode === true) {
